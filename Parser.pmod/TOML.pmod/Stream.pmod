@@ -1,30 +1,35 @@
+#include "toml.h"
 
-typedef string(8bit) string_t;
-typedef int(0..)     char_t;
-typedef int(0..)     int_t;
-typedef int          uint_t;
+class Stream
+{
+  public bool is_eol();
+  public char next();
+  public s8 next_str(int(..) n);
+  public variant s8 next_str();
+}
 
 class StringStream
 {
+  inherit Stream;
+
   constant EOL = '\0';
 
-  private string_t data;
-  private int_t    len;
-  private int_t    cursor;
+  protected s8 data;
+  protected int(0..) len;
+  protected int(0..) cursor;
 
-  protected void create(string_t data)
+  protected void create(s8 data)
   {
     set_data(data);
   }
 
-  public this_program set_data(string_t data)
+  public this_program set_data(s8 data)
   {
     this::data    = replace(data, ([ "\r\n" : "\n", "\r" : "\n" ]));
     this::len     = sizeof(this::data);
     this::cursor = 0;
 
     this::data += "\0";
-
 
     return this_program::this;
   }
@@ -34,7 +39,7 @@ class StringStream
     return cursor >= len;
   }
 
-  public char_t next()
+  public char next()
   {
     if (cursor >= len) {
       return 0;
@@ -43,30 +48,30 @@ class StringStream
     return data[cursor++];
   }
 
-  public string_t next_str(int_t n)
+  public s8 next_str(int(0..) n)
   {
     if (cursor + n > len) {
       return 0;
     }
 
-    string_t s = data[cursor .. cursor + (n-1)];
+    s8 s = data[cursor .. cursor + (n-1)];
     cursor += n;
 
     return s;
   }
 
-  public variant string_t next_str()
+  public variant s8 next_str()
   {
     if (cursor >= len) {
       return 0;
     }
 
-    string_t s = data[cursor .. cursor];
+    s8 s = data[cursor .. cursor];
     cursor += 1;
     return s;
   }
 
-  public string_t current_str()
+  public s8 current_str()
   {
     if (is_eol()) {
       return 0;
@@ -75,7 +80,7 @@ class StringStream
     return data[cursor .. cursor];
   }
 
-  public char_t current()
+  public char current()
   {
     if (is_eol()) {
       return 0;
@@ -84,7 +89,7 @@ class StringStream
     return data[cursor];
   }
 
-  public variant string_t current(int_t n)
+  public variant s8 current(int(0..) n)
   {
     if (cursor + n >= len) {
       return 0;
@@ -93,7 +98,7 @@ class StringStream
     return data[cursor .. cursor + n - 1];
   }
 
-  public char_t peek(int_t n)
+  public char peek(int(0..) n)
   {
     if (cursor + n >= len) {
       return 0;
@@ -102,12 +107,12 @@ class StringStream
     return data[cursor + n];
   }
 
-  public variant char_t peek()
+  public variant char peek()
   {
     return peek(1);
   }
 
-  public string_t peek_str(int_t n)
+  public s8 peek_str(int(0..) n)
   {
     if (cursor + n >= len) {
       return 0;
@@ -116,12 +121,12 @@ class StringStream
     return data[cursor + 1 .. cursor + n];
   }
 
-  public variant string_t peek_str()
+  public variant s8 peek_str()
   {
     return peek_str(1);
   }
 
-  public char_t rearview(int_t n)
+  public char rearview(int(0..) n)
   {
     if (cursor - n < 0) {
       return 0;
@@ -130,20 +135,20 @@ class StringStream
     return data[cursor - n];
   }
 
-  public variant char_t rearview()
+  public variant char rearview()
   {
     return rearview(1);
   }
 
-  public string_t read_to(char_t|string_t|multiset(char_t) what, bool inclusive)
+  public s8 read_to(char|s8|multiset(char) what, bool inclusive)
   {
-    string_t s;
+    s8 s;
 
     if (stringp(what) || intp(what)) {
-      uint_t pos = search(data, what, cursor);
+      int pos = search(data, what, cursor);
 
       if (pos > -1) {
-        int_t rlen = pos;
+        int(0..) rlen = pos;
 
         if (inclusive) {
           rlen += stringp(what) ? sizeof(what) : 1;
@@ -160,6 +165,11 @@ class StringStream
       while (1) {
         if (what[data[pos]]) {
           hit = true;
+
+          if (inclusive) {
+            pos += 1;
+          }
+
           break;
         }
 
@@ -183,7 +193,7 @@ class StringStream
     return s;
   }
 
-  public variant string_t read_to(char_t|string_t what)
+  public variant s8 read_to(char|s8|multiset(char) what)
   {
     return read_to(what, false);
   }
@@ -201,9 +211,14 @@ class StringStream
     return this_program::this;
   }
 
-  public this_program eat(int_t c)
+  public this_program eat(char|multiset(char) c)
   {
-    while (data[cursor] == c) {
+    if (intp(c)) {
+      c = (< c >);
+    }
+
+    int(0..) start = cursor;
+    while (c[data[cursor]]) {
       cursor += 1;
 
       if (cursor >= len) {
@@ -214,7 +229,7 @@ class StringStream
     return this_program::this;
   }
 
-  public this_program move(uint_t n)
+  public this_program move(int n)
   {
     if (cursor + n >= len) {
       error("Moving by %d would move the cursor past the end. ", n);
@@ -240,29 +255,8 @@ class StringStream
     return this_program::this;
   }
 
-  public int_t position()
+  public int(0..) position()
   {
     return cursor;
   }
-}
-
-mixed lex(string in)
-{
-  StringStream ps = StringStream(in);
-  ps->trim();
-
-  while (!ps->is_eol())  {
-    if (ps->current() == '\n') {
-      ps->eat('\n');
-    }
-
-    if (ps->peek() == '#') {
-      ps->next();
-      ps->read_to((< '\n', StringStream.EOL >), true);
-      continue;
-    }
-
-    char_t c = ps->next();
-    werror("%c\n", c);
-  };
 }
