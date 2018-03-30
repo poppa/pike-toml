@@ -1,8 +1,13 @@
+import .Token;
 
-mixed lex(string in)
+array(Token) lex(string in)
 {
-  .Lexer lexer = .Lexer(in);
-  lexer->lex();
-  werror("%O\n", lexer->rows);
-  werror("%O\n", lexer->position());
+  return .Lexer(in)->lex();
+}
+
+array(Token) fold_whitespace(array(Token) tokens)
+{
+  return filter(tokens, lambda (Token t) {
+    return !t->is_a(TYPE_WHITESPACE|TYPE_NEWLINE|TYPE_COMMENT);
+  });
 }

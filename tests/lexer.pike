@@ -1,3 +1,6 @@
+// Run with: pike -M../Parser.pmod lexer.pike
+//       or: pike -M../Parser.pmod -DTOML_LEXER_DEBUG lexer.pike
+
 #include "test.h"
 
 constant DATA = #string "simple1.toml";
@@ -64,5 +67,8 @@ int main()
 
   DONE();
 
-  TOML.lex(DATA);
+  array(TOML.Token.Token) res = TOML.lex(DATA);
+  werror("Res: %O\n", res);
+  res = TOML.fold_whitespace(res);
+  werror("Res folded: %O\n", res);
 }

@@ -2,14 +2,20 @@
 
 #ifdef TOML_LEXER_DEBUG
 # define TRACE(X...)werror("%s:%d: %s",basename(__FILE__),__LINE__,sprintf(X))
+# define PUSH_DEBUG_TOKEN(X...) do { \
+    push_token(TYPE_DEBUG, sprintf(X)); \
+  } while (0)
 #else
-# define TRACE(X...)0
+# define TRACE(X...)
+# define PUSH_DEBUG_TOKEN(X...)
 #endif
 
 #define die(X...) \
   do { \
     werror("Tokens: %O\n", tokens); \
-    exit(0, X); \
+    s8 p = sprintf("DIE: %s:%d: ", basename(__FILE__),  __LINE__); \
+    p += sprintf(X); \
+    exit(0, p); \
   } while (0)
 
 #define SYNTAX_ERROR(R...) \
@@ -20,15 +26,12 @@ import .Spec;
 import .Token;
 inherit .Stream.StringStream;
 
-mapping doc = ([]);
-mapping curr_storage = doc;
-mixed curr_value;
-int(0..) rows;
-int(0..) col;
+protected mixed curr_value;
+protected s8 curr_key;
+protected int(0..) rows;
+protected int(0..) col;
 
-array(Token) tokens = ({});
-
-s8 curr_key;
+protected array(Token) tokens = ({});
 
 protected int(1..) current_lineno()
 {
@@ -40,7 +43,7 @@ protected int(1..) current_column()
   return col + 1;
 }
 
-protected void push_token(SimpleType type, s8 text, void|int _col,
+protected void push_token(Type type, s8 text, void|int _col,
                           void|int _row)
 {
   if (zero_type(_col)) {
@@ -58,7 +61,7 @@ protected int count_escapes_behind()
 {
   int n = 0, step = 1;
 
-  werror("count_escapes_behind(< %c)\n", rearview());
+  // TRACE("count_escapes_behind(< %c)\n", rearview());
 
   while (rearview(step++) == '\\') {
     n += 1;
@@ -67,15 +70,17 @@ protected int count_escapes_behind()
   return n;
 }
 
-protected void eat_nl_only()
+protected void eat_nl_only(void|bool no_add_token)
 {
   int start = cursor;
   ::eat('\n');
   int n = cursor - start;
 
   while (n--) {
-    TRACE("Got %d nl\n", n);
-    push_token(SIMPLE_TYPE_NEWLINE, "\n");
+    if (!no_add_token) {
+      push_token(TYPE_NEWLINE, "\n");
+    }
+
     rows += 1;
     col = 0;
   }
@@ -90,23 +95,32 @@ protected void eat_nl()
 
 protected void eat_ws()
 {
-  if (WS[current()]) {
+ if (WS[current()]) {
     int(0..) s = cursor;
     ::eat(WS);
     int diff = cursor - s;
 
-    push_token(SIMPLE_TYPE_WHITESPACE, data[s .. cursor - 1]);
+    push_token(TYPE_WHITESPACE, data[s .. cursor - 1]);
 
     col += diff;
+  }
+}
+
+protected void eat_ws_nl()
+{
+  if (WS[current()]) {
+    eat_ws();
     eat_nl();
   }
 }
 
 protected void eat_comments()
 {
-  if (current() == '#') {
+  if (current() == COMMENT) {
     int(0..) s = cursor;
     read_to((< '\n', EOL >), false);
+    push_token(TYPE_COMMENT, data[s .. cursor]);
+
     col += cursor - s;
 
     if (peek() == '\n') {
@@ -114,19 +128,25 @@ protected void eat_comments()
       col += 1;
       eat_nl();
     }
+    else if (peek() == EOL) {
+      TRACE("Peek EOL in eat_comments()\n");
+      next();
+      return;
+    }
 
-    eat_ws();
+    eat_ws_nl();
   }
 }
 
 protected void read_literal_string()
 {
-  werror("read_literal_string()\n");
+  TRACE("read_literal_string()\n");
   String.Buffer b = String.Buffer();
 }
 
 protected void read_basic_string()
 {
+  TRACE(">>> read_basic_string(%c)\n", current());
   String.Buffer sb = String.Buffer();
 
   if (current() != '"') {
@@ -137,9 +157,7 @@ protected void read_basic_string()
   next();
   col += 1;
 
-  werror("read_basic_string(%c)\n", current());
-
-  int(0..) col_start = col - 1; // Take the eaten " into account
+  int(0..) col_start = col; // Take the eaten " into account
 
   loop: while (!is_eol()) {
     switch (current()) {
@@ -150,7 +168,7 @@ protected void read_basic_string()
         /* Check for escapes here */
         if (rearview() != '\\') {
           curr_value = sb->get();
-          push_token(SIMPLE_TYPE_STRING, curr_value, col_start);
+          push_token(TYPE_STRING, curr_value, col_start);
           next(); // eat current char
           col += 1;
           break loop;
@@ -185,6 +203,8 @@ protected void read_basic_string()
     next();
     col += 1;
   }
+
+  TRACE("<<< read_basic_string(%c)\n", current());
 }
 
 protected void read_multiline_string()
@@ -201,7 +221,7 @@ protected void read_multiline_string()
 
   string rd = next_str(3);
   col += 3;
-  eat_nl_only();
+  eat_nl_only(true);
 
   loop: while (!is_eol()) {
     switch (current()) {
@@ -212,7 +232,7 @@ protected void read_multiline_string()
           // End of string
           if (rearview() != '\\' && peek() == '"' && peek(2) == '"') {
             curr_value = sb->get();
-            push_token(SIMPLE_TYPE_M_STRING, curr_value, col_start, row_start);
+            push_token(TYPE_M_STRING, curr_value, col_start, row_start);
             cursor += 3;
             col += 3;
             break loop;
@@ -251,7 +271,6 @@ protected void read_multiline_string()
 
 protected mixed read_unquoted_key()
 {
-  werror("read_unquoted_key(%c)\n", current());
   String.Buffer sb = String.Buffer();
 
   int(0..) col_start = col + 1;
@@ -263,13 +282,14 @@ protected mixed read_unquoted_key()
         sb->putchar(current());
         break;
 
-      case ' ':
-        eat_ws();
+      case STD_TABLE_CLOSE:
+      case KEY_SEP:
+      case WS_TAB:
+      case WS_SPACE:
         /* Fall-through */
-      case '=':
+      case KEYVAL_SEP:
         curr_key = sb->get();
-        push_token(SIMPLE_TYPE_UNQUOTED_KEY, curr_key, col_start);
-        push_token(SIMPLE_TYPE_KEYVAL_SEP, "=");
+        push_token(TYPE_UNQUOTED_KEY, curr_key, col_start);
         break loop;
 
       default:
@@ -284,97 +304,168 @@ protected mixed read_unquoted_key()
 protected void read_value()
 {
   eat_ws();
-
   char c = current();
-
-  werror("read_value(%c)\n", c);
+  // TRACE("read_value(%c)\n", c);
 
   if (c == '"' && peek() == '"' && peek(2) == '"') {
     read_multiline_string();
-    eat_nl();
+    // eat_nl();
   }
   else if (c == '"') {
     read_basic_string();
-    eat_nl();
+    // eat_nl();
   }
   else {
     error("Value starting with %c not implemented yet. ", c);
   }
 }
 
-protected void read_key()
+protected void read_key_val()
 {
-  werror("read_key()\n");
-  s8 k;
+  TRACE(">>> read_key_val()\n");
 
   switch (current()) {
-    case '\'':
-      read_literal_string();
-      break;
-
-    case '"':
-      read_basic_string();
-      break;
-
-    default:
-      read_unquoted_key();
-      break;
+    case '\'': read_literal_string(); break;
+    case '"':  read_basic_string();   break;
+    default:   read_unquoted_key();   break;
   }
 
   eat_ws();
 
-  if (current() != '=') {
-    error("Syntax error at line %d. Expected \"=\" after key %q.\n",
-          current_lineno(), k || "Unknown key");
+  if (current() != KEYVAL_SEP) {
+    error("Syntax error at line %d. Expected \"=\" after key %q got \"%c\".\n",
+          current_lineno(), curr_key || "Unknown key", current());
   }
 
+  push_token(TYPE_KEYVAL_SEP, "=");
+  next();
+  col += 1;
+  eat_ws();
+  read_value();
+
+  TRACE("<<< read_key_val()\n");
+}
+
+protected void read_std_table(void|bool is_recurse)
+{
+  eat_ws();
+  char c = current();
+
+  TRACE(">> read_std_table(%c)\n", c);
+
+  if (UNQUOTED_KEY_START[c]) {
+    TRACE("Read unquoted key\n");
+    read_unquoted_key();
+  }
+  else if (QUOTED_KEY_START[c]) {
+    die("Read quoted key\n");
+  }
+  else {
+    SYNTAX_ERROR("Illegal character: \"%c\"", c);
+  }
+
+  eat_ws();
+
+  switch (current()) {
+    case KEY_SEP:
+      TRACE("key_sep: %d, %d\n", current_lineno(), current_column());
+      push_token(TYPE_KEY_SEP, ".");
+      next();
+      col += 1;
+      read_std_table();
+      break;
+
+    case STD_TABLE_CLOSE:
+      /* Break and let begin_read_std_table() take care of the token */
+      break;
+
+    default:
+
+      break;
+  }
+
+  TRACE("<< read_std_table(%c)\n", current());
+}
+
+protected void begin_read_std_table()
+{
+  TRACE(">> begin_read_std_table(%c)\n", current());
+  if (current() != STD_TABLE_OPEN) {
+    SYNTAX_ERROR("Expected [ got %c", current());
+  }
+
+  push_token(TYPE_STD_TABLE_OPEN, "[");
   next();
   col += 1;
 
-  read_value();
+  read_std_table();
+  eat_ws();
 
-  // exit(0);
+  if (current() != STD_TABLE_CLOSE) {
+    SYNTAX_ERROR("Expected ] got %c", current());
+  }
+
+  push_token(TYPE_STD_TABLE_CLOSE, "]");
+  next();
+  col += 1;
+
+  eat_nl();
+
+  TRACE("<< begin_read_std_table()\n");
 }
 
-mapping lex()
+array(Token) fold_whitespace()
+{
+  return filter(tokens, lambda (Token t) {
+    return !t->is_a(TYPE_WHITESPACE|TYPE_NEWLINE|TYPE_COMMENT);
+  });
+}
+
+array(Token) lex()
 {
   if (is_eol()) {
-    werror("Is eol\n");
-    exit(0);
+    return tokens;
   }
 
   eat_nl();
 
-  werror("After init: %c (row: %d, col: %d)\n",
+  TRACE(">>> lex: \"%c\" (row: %d, col: %d)\n",
          current(), current_lineno(), current_column());
+
+  if (is_eol()) {
+    TRACE("Is eol\n");
+    return tokens;
+  }
 
   switch (current())
   {
-    case '[':
-      if (peek() == '[') {
+    case STD_TABLE_OPEN:
+      // [[
+      if (peek() == STD_TABLE_OPEN) {
         die("Multitable\n");
       }
       else {
-        die("Table\n");
+        begin_read_std_table();
       }
-      break;
+      return lex();
 
-    // Key can start with [_ 0-9 a-Z " ']
+    // Key can start with [_0-9 a-Z"']
     case '\'': case '"': case '_':
     case '0' .. '9': case 'a' .. 'z': case 'A' .. 'Z':
-      werror("+++ Start read Key\n");
-      read_key();
-      werror("Should have key: %O\n", curr_key);
-      werror("Should have value: %O\n", curr_value);
+      read_key_val();
       return lex();
-      break;
+
+    case ' ':
+    case '\t':
+      eat_ws_nl();
+      return lex();
 
     default:
+      TRACE("len: %O, cursor: %O, is_eol: %O\n",
+            len, cursor, is_eol());
       SYNTAX_ERROR("Unexpexted character: \"%c\"", current());
       break;
   }
 
-  werror("Tokens: %O\n", tokens);
-
-  return doc + ([]);
+  return tokens;
 }
