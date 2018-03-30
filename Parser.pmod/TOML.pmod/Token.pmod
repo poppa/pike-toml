@@ -20,7 +20,7 @@ enum Type {
   TYPE_DEBUG           = 1 << 20,
 }
 
-protected mapping(int:s8) simple_type_to_str = ([
+protected mapping(int:s8) _type_to_str = ([
   TYPE_NONE            : "TYPE_NONE",
   TYPE_KEY             : "TYPE_KEY",
   TYPE_UNQUOTED_KEY    : "TYPE_UNQUOTED_KEY",
@@ -92,7 +92,7 @@ class Token
   {
     array(s8) t = ({});
 
-    foreach (simple_type_to_str; int tt; s8 st) {
+    foreach (_type_to_str; int tt; s8 st) {
       if (_type & tt) {
         t += ({ st });
       }

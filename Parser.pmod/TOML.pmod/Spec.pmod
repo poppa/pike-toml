@@ -1,5 +1,6 @@
-constant WS_TAB = '\t';
+constant WS_TAB   = '\t';
 constant WS_SPACE = ' ';
+constant NEWLINE  = '\n';
 
 constant WS   = (< WS_SPACE, WS_TAB >);
 constant QUOT = (< '\'', '"' >);
@@ -27,7 +28,7 @@ constant STD_TABLE_OPEN = 0x5B;
 constant STD_TABLE_CLOSE = 0x5D;
 
 constant UNQUOTED_KEY       = ALNUM + (< '_', '-' >);
-constant UNQUOTED_KEY_START = ALNUM + (< '_' >);
+constant UNQUOTED_KEY_START = UNQUOTED_KEY;
 constant QUOTED_KEY_START   = (< '"', '\'' >);
 constant KEY_START          = UNQUOTED_KEY_START + QUOTED_KEY_START;
 
