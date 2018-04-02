@@ -19,7 +19,7 @@ int main()
   ASSERT_EQ(ps->next_str(4),          "ghij");
   ASSERT_EQ(ps->next_str(),           "k");
   // We should now be at the end.
-  ASSERT(ps->is_eol());
+  ASSERT(ps->is_eof());
 
   ps->rewind();
 
@@ -67,8 +67,11 @@ int main()
 
   DONE();
 
+  int t = gethrtime();
   array(TOML.Token.Token) res = TOML.lex(DATA);
   werror("Res: %O\n", res);
-  res = TOML.fold_whitespace(res);
-  werror("Res folded: %O\n", res);
+
+  // res = TOML.fold_whitespace(res);
+  // werror("Res folded: %O\n", res);
+  werror("Took: %.fs\n", (gethrtime() - t) / 1000000.0);
 }

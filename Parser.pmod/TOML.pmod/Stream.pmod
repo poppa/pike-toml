@@ -2,7 +2,7 @@
 
 class Stream
 {
-  public bool is_eol();
+  public bool is_eof();
   public char next();
   public s8 next_str(int(..) n);
   public variant s8 next_str();
@@ -12,7 +12,7 @@ class StringStream
 {
   inherit Stream;
 
-  constant EOL = '\0';
+  constant EOF = '\0';
 
   protected s8 data;
   protected int(0..) len;
@@ -34,7 +34,7 @@ class StringStream
     return this_program::this;
   }
 
-  public bool is_eol()
+  public bool is_eof()
   {
     return cursor >= len;
   }
@@ -73,7 +73,7 @@ class StringStream
 
   public s8 current_str()
   {
-    if (is_eol()) {
+    if (is_eof()) {
       return 0;
     }
 
@@ -82,7 +82,7 @@ class StringStream
 
   public char current()
   {
-    if (is_eol()) {
+    if (is_eof()) {
       return 0;
     }
 

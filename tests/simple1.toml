@@ -1,11 +1,14 @@
 
+
   ################################################################################
 ## Table
 
 # Tables (also known as hash tables or dictionaries) are collections of
   # key/value pairs. They appear in square brackets on a line by themselves.
 
-  dockey   = "Yay Man \"123." # should'nt affect next key
+lit = 'Literal \n c:\\path\s'
+
+  _doc-03245key="Yay Man \"123." # should'nt affect next key
 
   # This should neither...
 mulline  = """
@@ -14,6 +17,16 @@ which should keep it's
 newlines
 """
 
-[table]
+[table.one]
 
-key = "value" # Yeah, you can do this.
+key       = "value" # Yeah, you can do this.
+bool      = true
+fulldate  = 1979-05-27T00:32:00.999999-07:00
+fulldate2 = 1979-05-27T00:32:00-07:00
+shorttime = 12:30:32
+shortdate = 2013-12-21
+nanval    = nan
+floatval  = 1.1
+hexval    = 0x12
+octval    = 0xFfCd23
+binval    = 0b0101110

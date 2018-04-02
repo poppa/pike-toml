@@ -4,16 +4,18 @@ import TOML.Token;
 
 int main(int argc, array(string) argv)
 {
-  ASSERT_EQ(TYPE_KEY,           1 << 0);
-  ASSERT_EQ(TYPE_UNQUOTED_KEY,  1 << 1);
-  ASSERT_EQ(TYPE_QUOTED_KEY,    1 << 2);
-  ASSERT_EQ(TYPE_DOTTED_KEY,    1 << 3);
-  ASSERT_EQ(TYPE_KEYVAL_SEP,    1 << 4);
-  ASSERT_EQ(TYPE_WHITESPACE,    1 << 5);
-  ASSERT_EQ(TYPE_NEWLINE,       1 << 6);
-  ASSERT_EQ(TYPE_STRING,        1 << 7);
-  ASSERT_EQ(TYPE_M_STRING,      1 << 8);
-  ASSERT_EQ(TYPE_VALUE,         TYPE_STRING | TYPE_M_STRING);
+  array(Token2) tokens = ({
+    Token2(T_WS, 0, " \t", 1, 1),
+    Token2(T_NL, 0, "\n",  2, 1),
+    Token2(T_NL, 0, "\n",  3, 1),
+    Token2(T_KEY, K_QUOTED, "hello", 4, 1),
+    Token2(T_WS, 0, " ", 4, 7),
+    Token2(T_KEYVAL_SEP, 0, "=", 4, 8),
+    Token2(T_VAL, V_STR, "world", 4, 9)
+  });
+
+  werror("%O\n", TOML.fold_whitespace(tokens));
+
   DONE();
   return 0;
 }

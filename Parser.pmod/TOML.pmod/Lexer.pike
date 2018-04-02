@@ -19,9 +19,15 @@
   case '_': case '\'': case '"': case '-'
 
 #define NEXT() do {                                                \
-    next();                                                        \
+    cursor++;                                                      \
     col += 1;                                                      \
   } while (0)
+
+#define MUL_STR() \
+  (current() == STR_START && peek() == STR_START && peek(2) == STR_START)
+
+#define IS_DIGIT_START(c) \
+  (DIGIT[c] || c == '+' || c == '-' )
 
 #define die(X...)                                                  \
   do {                                                             \
@@ -31,9 +37,26 @@
     exit(0, p);                                                    \
   } while (0)
 
+#define CURRENT() data[cursor]
+#define CURR_COL() col + 1
+#define CURR_LINENO() rows + 1
+
 #define SYNTAX_ERROR(R...)                                         \
-  error("Synax error at line %d column %d byte %d: %s.\n",         \
+  error("TOML syntax error at line %d column %d byte %d: %s.\n",   \
         current_lineno(), current_column(), cursor, sprintf(R))
+
+#define EXPECT(C)                                                  \
+  do {                                                             \
+    if (CURRENT() != C) {                                          \
+      SYNTAX_ERROR("Expected \"%c\" got \"%c\"", C, CURRENT());    \
+    }                                                              \
+  } while (0)
+
+#ifdef TOML_ADD_WS_TOKENS
+# define PUSH_FOLD_TOKEN(TYPE,VAL) push_token((TYPE), (VAL))
+#else
+# define PUSH_FOLD_TOKEN(TYPE,VAL)
+#endif
 
 import .Spec;
 import .Token;
@@ -56,18 +79,19 @@ protected int(1..) current_column()
   return col + 1;
 }
 
-protected void push_token(Type type, s8 text, void|int _col,
-                          void|int _row)
+protected void push_token(Type type, s8 text, int _col, int _row)
 {
-  if (zero_type(_col)) {
-    _col = current_column();
-  }
-
-  if (zero_type(_row)) {
-    _row = current_lineno();
-  }
-
   tokens += ({ Token(type, text, _row, _col) });
+}
+
+protected variant void push_token(Type type, s8 text, int _col)
+{
+  push_token(type, text, _col, CURR_LINENO());
+}
+
+protected variant void push_token(Type type, s8 text)
+{
+  push_token(type, text, CURR_COL(), CURR_LINENO());
 }
 
 protected int count_escapes_behind()
@@ -89,7 +113,8 @@ protected void eat_nl_only(void|bool no_add_token)
 
   while (n--) {
     if (!no_add_token) {
-      push_token(TYPE_NEWLINE, "\n");
+      // push_token(TYPE_NEWLINE, "\n");
+      PUSH_FOLD_TOKEN(TYPE_NEWLINE, "\n");
     }
 
     rows += 1;
@@ -106,12 +131,13 @@ protected void eat_nl()
 
 protected void eat_ws()
 {
- if (WS[current()]) {
+ if (WS[CURRENT()]) {
     int(0..) s = cursor;
     ::eat(WS);
     int diff = cursor - s;
 
-    push_token(TYPE_WHITESPACE, data[s .. cursor - 1]);
+    // push_token(TYPE_WHITESPACE, data[s .. cursor - 1]);
+    PUSH_FOLD_TOKEN(TYPE_WHITESPACE, data[s .. cursor - 1]);
 
     col += diff;
   }
@@ -119,7 +145,7 @@ protected void eat_ws()
 
 protected void eat_ws_nl()
 {
-  if (WS[current()]) {
+  if (WS[CURRENT()]) {
     eat_ws();
     eat_nl();
   }
@@ -127,10 +153,11 @@ protected void eat_ws_nl()
 
 protected void eat_comments()
 {
-  if (current() == COMMENT) {
+  if (CURRENT() == COMMENT) {
     int(0..) s = cursor;
-    read_to((< '\n', EOL >), false);
-    push_token(TYPE_COMMENT, data[s .. cursor]);
+    read_to((< '\n', EOF >), false);
+    // push_token(TYPE_COMMENT, data[s .. cursor]);
+    PUSH_FOLD_TOKEN(TYPE_COMMENT, data[s .. cursor]);
 
     col += cursor - s;
 
@@ -138,8 +165,8 @@ protected void eat_comments()
       NEXT();
       eat_nl();
     }
-    else if (peek() == EOL) {
-      TRACE("Peek EOL in eat_comments()\n");
+    else if (peek() == EOF) {
+      TRACE("Peek EOF in eat_comments()\n");
       next();
       return;
     }
@@ -150,24 +177,47 @@ protected void eat_comments()
 
 protected void read_literal_string()
 {
-  die("read_literal_string()\n");
   String.Buffer b = String.Buffer();
+
+  EXPECT('\'');
+
+  NEXT();
+
+  loop: while (!is_eof()) {
+    switch (current()) {
+      case 0x09:
+      case 0x20 .. 0x26:
+      case 0x28 .. 0x10FFFF:
+        break;
+
+      case '\'':
+        curr_value = b->get();
+        break loop;
+
+      default:
+        if (CURRENT() == NEWLINE) {
+          SYNTAX_ERROR("Unexpected newline in string");
+        }
+
+        SYNTAX_ERROR("Illegat character: %c (char %[0]d)", CURRENT());
+    }
+
+    b->putchar(CURRENT());
+    NEXT();
+  }
 }
 
 protected void read_basic_string()
 {
-  TRACE(">>> read_basic_string(%c)\n", current());
   String.Buffer sb = String.Buffer();
 
-  if (current() != '"') {
-    SYNTAX_ERROR("Expected \" but got %c", current());
-  }
-
+  EXPECT('"');
   // Eat the "
   NEXT();
 
-  loop: while (!is_eol()) {
-    switch (current()) {
+  loop: while (!is_eof()) {
+    char c = CURRENT();
+    switch (c) {
       /* [ space ] / [ ! ] */
       case 0x20 .. 0x21: break;
       /* [ " ] Possibly end of string */
@@ -197,24 +247,22 @@ protected void read_basic_string()
       case 0x80 .. 0x10ffff: break;
 
       default:
-        if (current() == NEWLINE) {
+        if (CURRENT() == NEWLINE) {
           SYNTAX_ERROR("Unexpected newline in string");
         }
 
-        SYNTAX_ERROR("Illegat character: %c (char %[0]d)", current());
+        SYNTAX_ERROR("Illegat character: %c (char %[0]d)", CURRENT());
         break;
     }
 
-    sb->putchar(current());
+    sb->putchar(CURRENT());
     NEXT();
   }
-
-  TRACE("<<< read_basic_string(%c)\n", current());
 }
 
 protected void read_multiline_string()
 {
-  if (current() != '"' && peek() != '"' && peek(2) != '"') {
+  if (!MUL_STR()) {
     SYNTAX_ERROR("Explected \"\"\" but got %c%c%c",
                  current(), peek(), peek(2));
   }
@@ -228,12 +276,13 @@ protected void read_multiline_string()
   col += 3;
   eat_nl_only(true);
 
-  loop: while (!is_eol()) {
-    switch (current()) {
+  loop: while (!is_eof()) {
+    char c = CURRENT();
+    switch (c) {
       // newline
       case 0x0A: break;
       case 0x20 .. 0x5B:
-        if (current() == 0x22) {
+        if (c == 0x22) {
           // End of string
           if (rearview() != '\\' && peek() == '"' && peek(2) == '"') {
             curr_value = sb->get();
@@ -261,7 +310,7 @@ protected void read_multiline_string()
         break;
     }
 
-    if (current() == NEWLINE) {
+    if (CURRENT() == NEWLINE) {
       rows += 1;
       col = 0;
     }
@@ -269,7 +318,8 @@ protected void read_multiline_string()
       col += 1;
     }
 
-    sb->putchar(current());
+    sb->putchar(CURRENT());
+    // No macro here since we take care of the line and col bumps above
     next();
   }
 }
@@ -278,10 +328,10 @@ protected mixed read_unquoted_key()
 {
   String.Buffer sb = String.Buffer();
 
-  loop: while (!is_eol()) {
-    switch (current()) {
+  loop: while (!is_eof()) {
+    switch (CURRENT()) {
       CASE_KEY_START:
-        sb->putchar(current());
+        sb->putchar(CURRENT());
         break;
 
       case STD_TABLE_CLOSE:
@@ -303,43 +353,242 @@ protected mixed read_unquoted_key()
   }
 }
 
+protected s8 low_read_val()
+{
+  int curpos = cursor;
+  read_to((< ' ', '\t', EOF, '\n', ',' >));
+
+  if (cursor == curpos) {
+    return 0;
+  }
+
+  return data[curpos .. cursor];
+}
+
+#define DATEP "%*4d-%*2d-%*2d"
+#define TIMEP "%*2d:%*2d:%*2d"
+
+protected void parse_value()
+{
+  char c = CURRENT();
+
+  if (c == '.') {
+    SYNTAX_ERROR("Scalar values must not start with a \".\"");
+  }
+
+  int curpos = cursor;
+  int col_start = col + 1;
+  int row_start = rows + 1;
+  string x = low_read_val();
+
+  if (!x) {
+    error("FIXME: Unexpected error.\n");
+  }
+
+  curr_value = x;
+
+  if (x == "true" || x == "false") {
+    push_token(TYPE_BOOL, x, col_start);
+    return;
+  }
+
+  x = replace(x, "_", "");
+  TRACE("x: %s\n", x);
+
+  if (x[0] == '+') {
+    x = x[1..];
+  }
+
+  if (x == "0" || x == "-0") {
+    push_token(TYPE_INT, x, col_start);
+    return;
+  }
+
+  if (x == "0.0" || x == "-0.0") {
+    push_token(TYPE_FLOAT, x, col_start);
+    return;
+  }
+
+  string lx = lower_case(x);
+  int xlen  = sizeof(lx);
+
+  if (lx == "nan") {
+    push_token(TYPE_NAN, x, col_start);
+    return;
+  }
+
+  if (lx == "inf" || lx == "-inf") {
+    push_token(TYPE_INF, x, col_start);
+    return;
+  }
+
+  // Check for dates
+  if (xlen >= 8) {
+    object m;
+    bool is_time = true;
+    if (sscanf(x, DATEP) == 3) {
+      if (mixed err = catch(m = Calendar.dwim_time(x))) {
+        is_time = false;
+        catch(m = Calendar.dwim_day(x));
+      }
+    }
+    else if (sscanf(x, TIMEP) == 3) {
+      if (catch(m = Calendar.dwim_time(x))) {
+        is_time = false;
+      }
+    }
+
+    if (m && is_time) {
+      push_token(TYPE_TIME, x, col_start);
+      return;
+    }
+    else if (m) {
+      push_token(TYPE_DATE, x, col_start);
+      return;
+    }
+  }
+
+  lx = "\0" + lx + "\0";
+
+  bool is_float, is_binary,
+    is_hex, is_octal;
+
+  multiset(char) numcheck = DIGIT;
+
+  loop: for (int i = 1; i <= xlen; i++) {
+    char d  = lx[i];
+    char nx = lx[i+1];
+    char px = lx[i-1];
+
+    if (is_hex) {
+      if (!HEX_CHARS[d]) {
+        SYNTAX_ERROR("Invalid hexadecimal value");
+      }
+      continue;
+    }
+    else if (is_octal) {
+      if (!OCTAL[d]) {
+        SYNTAX_ERROR("Invalid octal value");
+      }
+      continue;
+    }
+    else if (is_binary) {
+      if (!BINARY[d]) {
+        SYNTAX_ERROR("Invalid binary number");
+      }
+      continue;
+    }
+
+    switch (d) {
+      case '0' .. '9': continue loop;
+      case '.':
+        if (is_float) {
+          SYNTAX_ERROR("Malformed float value");
+        }
+
+        is_float = true;
+        continue loop;
+
+      // Binary
+      case 'b':
+        if (px != '0') {
+          SYNTAX_ERROR("Malformed binary value");
+        }
+
+        is_binary = true;
+        continue loop;
+
+      // Hexadecimal
+      case 'x':
+        if (is_float || is_octal || is_binary || px != '0') {
+          SYNTAX_ERROR("Malformed hexadecimal value");
+        }
+
+        is_hex = true;
+        continue loop;
+
+      // Octal
+      case 'o':
+        if (is_octal || is_hex || is_float || px != '0') {
+          SYNTAX_ERROR("Malformed octal value");
+        }
+
+        is_octal = true;
+        continue loop;
+
+      // Exponential
+      case 'e':
+        if (!(DIGIT[nx] || (< '-', '+' >)[nx])) {
+          SYNTAX_ERROR("Malformed numeric value");
+        }
+        continue loop;
+
+      default:
+        SYNTAX_ERROR("Illegal character %c", x[i-1]);
+    }
+  }
+
+  if (is_float) {
+    push_token(TYPE_FLOAT, x, col_start);
+  }
+  else if (is_hex) {
+    push_token(TYPE_HEX, x, col_start);
+  }
+  else if (is_octal) {
+    push_token(TYPE_OCT, x, col_start);
+  }
+  else if (is_binary) {
+    push_token(TYPE_BINARY, x, col_start);
+  }
+  else {
+    push_token(TYPE_INT, x, col_start);
+  }
+}
+
 protected void read_value()
 {
   eat_ws();
-  char c = current();
+  char c = CURRENT();
+  int(0..) row_start = rows + 1;
+  int(0..) col_start = col + 1;
 
-  if (c == '"' && peek() == '"' && peek(2) == '"') {
+  if (MUL_STR()) {
     read_multiline_string();
-    // eat_nl();
   }
-  else if (c == '"') {
-    int(0..) col_start = col + 1;
+  else if (c == STR_START) {
     read_basic_string();
     push_token(TYPE_STRING, curr_value, col_start);
     NEXT();
   }
+  else if (c == LIT_STR_START) {
+    read_literal_string();
+    push_token(TYPE_LIT_STRING, curr_value, col_start);
+    NEXT();
+  }
+  else if (c == INLINE_TBL_START) {
+    error("Inline table not implemented yet.\n");
+  }
   else {
-    error("Value starting with %c not implemented yet. ", c);
+    parse_value();
+    NEXT();
   }
 }
 
 protected void read_key_val()
 {
-  TRACE(">>> read_key_val()\n");
   read_key();
   eat_ws();
 
-  if (current() != KEYVAL_SEP) {
-    error("Syntax error at line %d. Expected \"=\" after key %q got \"%c\".\n",
-          current_lineno(), curr_key || "Unknown key", current());
+  if (CURRENT() != KEYVAL_SEP) {
+    SYNTAX_ERROR("Expected \"=\" after key %q got \"%c\".\n",
+                 curr_key || "Unknown key", current());
   }
 
-  push_token(TYPE_KEYVAL_SEP, "=");
+  push_token(TYPE_KEYVAL_SEP, current_str());
   NEXT();
   eat_ws();
   read_value();
   eat_nl();
-  TRACE("<<< read_key_val(%c)\n", current());
 }
 
 protected void read_key(void|bool is_recurse)
@@ -356,14 +605,17 @@ protected void read_key(void|bool is_recurse)
     read_unquoted_key();
     push_token(TYPE_UNQUOTED_KEY, curr_key, col_start);
   }
-  else if (QUOTED_KEY_START[c]) {
+  else if (c == LITERAL_KEY_START) {
+    read_literal_string();
+    EXPECT(LITERAL_KEY_START);
+    curr_key = curr_value;
+    push_token(TYPE_LIT_KEY, curr_key, col_start);
+    NEXT();
+  }
+  else if (c == QUOTED_KEY_START) {
     read_basic_string();
+    EXPECT(QUOTED_KEY_START);
     push_token(TYPE_QUOTED_KEY, curr_value, col_start);
-
-    if (current() != '"') {
-      SYNTAX_ERROR("Expected \" got %c", current());
-    }
-
     NEXT();
   }
   else {
@@ -384,31 +636,20 @@ protected void read_key(void|bool is_recurse)
       break;
   }
 
-  TRACE("<< read_key(%c)\n", current());
+  TRACE("<< read_key(%c)\n", CURRENT());
 }
 
 protected void read_std_table()
 {
-  TRACE(">> read_std_table(%c)\n", current());
-
-  if (current() != STD_TABLE_OPEN) {
-    SYNTAX_ERROR("Expected [ got %c", current());
-  }
-
+  EXPECT(STD_TABLE_OPEN);
   push_token(TYPE_STD_TABLE_OPEN, "[");
   NEXT();
   read_key();
   eat_ws();
-
-  if (current() != STD_TABLE_CLOSE) {
-    SYNTAX_ERROR("Expected ] got %c", current());
-  }
-
+  EXPECT(STD_TABLE_CLOSE);
   push_token(TYPE_STD_TABLE_CLOSE, "]");
   NEXT();
   eat_nl();
-
-  TRACE("<< read_std_table()\n");
 }
 
 array(Token) fold_whitespace()
@@ -420,47 +661,48 @@ array(Token) fold_whitespace()
 
 array(Token) lex()
 {
-  if (is_eol()) {
+  if (is_eof()) {
     return tokens;
   }
 
-  eat_nl();
+  do {
+    eat_nl();
 
-  TRACE(">>> lex: \"%c\" (row: %d, col: %d)\n",
-         current(), current_lineno(), current_column());
+    TRACE(">>> lex: \"%c\" (row: %d, col: %d)\n",
+           current(), current_lineno(), current_column());
 
-  if (is_eol()) {
-    TRACE("Is eol\n");
-    return tokens;
-  }
+    if (is_eof()) {
+      TRACE("Is eol\n");
+      return tokens;
+    }
 
-  switch (current())
-  {
-    case STD_TABLE_OPEN:
-      // [[
-      if (peek() == STD_TABLE_OPEN) {
-        die("Multitable\n");
-      }
-      else {
-        read_std_table();
-      }
-      return lex();
+    switch (CURRENT()) {
+      case STD_TABLE_OPEN:
+        // [[
+        if (peek() == STD_TABLE_OPEN) {
+          die("Multitable\n");
+        }
+        else {
+          read_std_table();
+        }
+        continue;
 
-    CASE_KEY_START:
-      read_key_val();
-      return lex();
+      CASE_KEY_START:
+        read_key_val();
+        continue;
 
-    case ' ':
-    case '\t':
-      eat_ws_nl();
-      return lex();
+      case ' ':
+      case '\t':
+        eat_ws_nl();
+        continue;
 
-    default:
-      TRACE("len: %O, cursor: %O, is_eol: %O\n",
-            len, cursor, is_eol());
-      SYNTAX_ERROR("Unexpexted character: \"%c\"", current());
-      break;
-  }
+      default:
+        TRACE("len: %O, cursor: %O, is_eof: %O\n",
+              len, cursor, is_eof());
+        SYNTAX_ERROR("Unexpexted character: \"%c\"", current());
+    }
+
+  } while (!is_eof());
 
   return tokens;
 }
