@@ -67,11 +67,12 @@ int main()
 
   DONE();
 
-  int t = gethrtime();
+  START_TIMER();
+
   array(TOML.Token.Token) res = TOML.lex(DATA);
   werror("Res: %O\n", res);
 
   // res = TOML.fold_whitespace(res);
   // werror("Res folded: %O\n", res);
-  werror("Took: %.fs\n", (gethrtime() - t) / 1000000.0);
+  werror("Took: %.fs\n", GET_TIME());
 }

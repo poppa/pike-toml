@@ -50,7 +50,7 @@
   } while (0)
 
 #ifdef TOML_ADD_WS_TOKENS
-# define PUSH_FOLD_TOKEN(TYPE,VAL) push_token((TYPE), (VAL))
+# define PUSH_FOLD_TOKEN(TYPE,VAL) push_token((TYPE), 0, (VAL))
 #else
 # define PUSH_FOLD_TOKEN(TYPE,VAL)
 #endif

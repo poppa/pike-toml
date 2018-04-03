@@ -1,6 +1,7 @@
 
 #include "toml.h"
 
+#if 0
 enum Type {
   TYPE_NONE            = 0,
   TYPE_KEY             = 1 << 0,
@@ -33,6 +34,7 @@ enum Type {
                          TYPE_NAN | TYPE_BINARY | TYPE_OCT | TYPE_HEX,
   TYPE_DEBUG           = 1 << 30,
 }
+#endif
 
 enum BaseType {
   T_NONE,
@@ -40,6 +42,7 @@ enum BaseType {
   T_KEY_SEP,
   T_KEYVAL_SEP,
   T_VAL,
+  T_VAL_SEP,
   T_NL,
   T_WS,
   T_COMMENT,
@@ -61,6 +64,7 @@ mapping _basetype_to_str = ([
   T_KEY_SEP    : "T_KEY_SEP",
   T_KEYVAL_SEP : "T_KEYVAL_SEP",
   T_VAL        : "T_VAL",
+  T_VAL_SEP    : "T_VAL_SEP",
   T_NL         : "T_NL",
   T_WS         : "T_WS",
   T_COMMENT    : "T_COMMENT",
@@ -118,6 +122,7 @@ mapping _subtype_to_str = ([
   V_NAN       : "V_NAN",
 ]);
 
+#if 0
 protected mapping(int:s8) _type_to_str = ([
   TYPE_NONE            : "TYPE_NONE",
   TYPE_KEY             : "TYPE_KEY",
@@ -148,8 +153,9 @@ protected mapping(int:s8) _type_to_str = ([
   TYPE_LIT_KEY         : "TYPE_LIT_KEY",
   TYPE_DEBUG           : "<< TYPE_DEBUG >>",
 ]);
+#endif
 
-class Token2
+class Token
 {
   protected BaseType _type;
   protected SubType _sub;
@@ -176,10 +182,11 @@ class Token2
 
   protected s8 _sprintf(int t)
   {
-    return sprintf("%O(%O, \"%s\")",
+    return sprintf("%O(%O, \"%s\", %d, %d)",
       object_program(this),
       type_to_str(),
-      shorten_text(_text));
+      shorten_text(_text),
+      _line, _col);
   }
 
   protected s8 shorten_text(s8 t)
@@ -217,6 +224,7 @@ class Token2
 
 }
 
+#if 0
 class Token
 {
   protected Type _type;
@@ -279,3 +287,4 @@ class Token
     return t * " | ";
   }
 }
+#endif

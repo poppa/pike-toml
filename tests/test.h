@@ -10,3 +10,6 @@ int __a_ok;
    __a_ok++
 
 #define DONE() write("[✔] %d simple tests passed\n\n", __a_ok)
+
+#define START_TIMER() int T__ = gethrtime();
+#define GET_TIME() ((gethrtime() - T__) / 1000000.0)

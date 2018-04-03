@@ -2,9 +2,10 @@ constant WS_TAB   = '\t';
 constant WS_SPACE = ' ';
 constant NEWLINE  = '\n';
 
-constant WS   = (< WS_SPACE, WS_TAB >);
-constant QUOT = (< '\'', '"' >);
-constant ESC  = (< '\\' >);
+constant WS     = (< WS_SPACE, WS_TAB >);
+constant WS_ALL = WS + (< NEWLINE >);
+constant QUOT   = (< '\'', '"' >);
+constant ESC    = (< '\\' >);
 
 constant ALPHA_DOWN = (<
   'a','b','c','d','e','f','g','h','i','j','k','l','m',
@@ -27,13 +28,17 @@ constant STD_TABLE_OPEN = 0x5B;
 // ]
 constant STD_TABLE_CLOSE = 0x5D;
 
-constant COMMENT          = '#';
-constant KEYVAL_SEP       = '=';
-constant KEY_SEP          = '.';
-constant LIT_STR_START    = '\'';
-constant STR_START        = '"';
-constant INLINE_TBL_START = '{';
-constant INLINE_TBL_END   = '}';
+constant COMMENT           = '#';
+constant KEYVAL_SEP        = '=';
+constant KEYVAL_SEP_INLINE = ':';
+constant KEY_SEP           = '.';
+constant VAL_SEP           = ',';
+constant LIT_STR_START     = '\'';
+constant STR_START         = '"';
+constant INLINE_TBL_START  = '{';
+constant INLINE_TBL_END    = '}';
+constant ARRAY_START       = '[';
+constant ARRAY_END         = ']';
 
 
 constant UNQUOTED_KEY       = ALNUM + (< '_', '-' >);
