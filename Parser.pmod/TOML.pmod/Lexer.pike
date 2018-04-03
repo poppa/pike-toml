@@ -9,7 +9,7 @@ import .Spec;
 import .Token;
 inherit .Stream.StringStream;
 
-protected mixed curr_value;
+protected s8 curr_value;
 protected s8 curr_key;
 protected int(0..) rows;
 protected int(0..) col;
@@ -223,6 +223,8 @@ protected void read_multiline_string()
   col += 3;
   eat_nl_only(true);
 
+  bool skip_add = false;
+
   loop: while (!is_eof()) {
     char c = CURRENT();
     switch (c) {
@@ -243,8 +245,12 @@ protected void read_multiline_string()
 
       // [ \ ]
       case 0x5C:
-        if (!ESC_SEQ[peek()]) {
+        if (!ESC_SEQ[peek()] && peek() != '\n') {
           SYNTAX_ERROR("Illegal escape: \\%c", peek());
+        }
+
+        if (peek() == '\n') {
+          skip_add = true;
         }
         // Check for \[u4HEX | U8HEX]
         break;
@@ -257,15 +263,29 @@ protected void read_multiline_string()
         break;
     }
 
+    if (!skip_add) {
+      sb->putchar(CURRENT());
+    }
+    else {
+      skip_add = false;
+    }
+
     if (CURRENT() == NEWLINE) {
       rows += 1;
       col = 0;
+
+      // Multiline strings ending with \ should remove starting whitespace
+      // on the next line
+      if (rearview() == '\\') {
+        next();
+        eat_ws();
+        continue;
+      }
     }
     else {
       col += 1;
     }
 
-    sb->putchar(CURRENT());
     // No macro here since we take care of the line and col bumps above
     next();
   }

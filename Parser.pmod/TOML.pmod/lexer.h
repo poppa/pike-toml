@@ -11,6 +11,10 @@
 # define PUSH_DEBUG_TOKEN(X...)
 #endif
 
+#define CURRENT() data[cursor]
+#define CURR_COL() col + 1
+#define CURR_LINENO() rows + 1
+
 #define CASE_KEY_START                                             \
   case '0' .. '9': case 'a' .. 'z': case 'A' .. 'Z':               \
   case '_': case '\'': case '"': case '-'
@@ -21,7 +25,7 @@
   } while (0)
 
 #define MUL_STR() \
-  (current() == STR_START && peek() == STR_START && peek(2) == STR_START)
+  (CURRENT() == STR_START && peek() == STR_START && peek(2) == STR_START)
 
 #define IS_DIGIT_START(c) \
   (DIGIT[c] || c == '+' || c == '-' )
@@ -33,10 +37,6 @@
     p += sprintf(X);                                               \
     exit(0, p);                                                    \
   } while (0)
-
-#define CURRENT() data[cursor]
-#define CURR_COL() col + 1
-#define CURR_LINENO() rows + 1
 
 #define SYNTAX_ERROR(R...)                                         \
   error("TOML syntax error at line %d column %d byte %d: %s.\n",   \

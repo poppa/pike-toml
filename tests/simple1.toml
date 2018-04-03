@@ -12,10 +12,9 @@ lit = 'Literal \n c:\\path\s'
 
   # This should neither...
 mulline  = """
-This is a multiline string
-which should keep it's
-newlines
-"""
+    This is a multiline string \
+    which should keep it's \
+    newlines but be left trimmed."""
 
 [table.one]
 
