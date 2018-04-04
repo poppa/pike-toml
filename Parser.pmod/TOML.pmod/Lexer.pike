@@ -11,8 +11,8 @@ inherit .Stream.StringStream;
 
 protected s8 curr_value;
 protected s8 curr_key;
-protected int(0..) rows;
-protected int(0..) col;
+protected final local int(0..) rows;
+protected final local int(0..) col;
 
 protected enum KeyMode {
   KEYMODE_DEFAULT,
@@ -741,6 +741,25 @@ protected void read_std_table()
   eat_nl();
 }
 
+protected void read_multi_table()
+{
+  EXPECT(STD_TABLE_OPEN);
+  NEXT();
+  EXPECT(STD_TABLE_OPEN);
+  // Note that the previous col is added since we consumed two chars
+  push_token(T_MULTBL_O, 0, "[[", col);
+  NEXT();
+  eat_ws();
+  read_key();
+  eat_ws();
+  EXPECT(STD_TABLE_CLOSE);
+  NEXT();
+  EXPECT(STD_TABLE_CLOSE);
+  NEXT();
+  push_token(T_MULTBL_C, 0, "]]", col-1);
+  eat_nl();
+}
+
 array(Token) fold_whitespace()
 {
   return .fold_whitespace(tokens);
@@ -767,7 +786,7 @@ array(Token) lex()
       case STD_TABLE_OPEN:
         // [[
         if (peek() == STD_TABLE_OPEN) {
-          die("Multitable\n");
+          read_multi_table();
         }
         else {
           read_std_table();
