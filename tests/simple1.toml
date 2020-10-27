@@ -1,26 +1,7 @@
-
-
-  ################################################################################
 ## Table
 
-# Tables (also known as hash tables or dictionaries) are collections of
-  # key/value pairs. They appear in square brackets on a line by themselves.
+# Yup
 
-str   = [
-  "My string",
-  "Yay"
-]
-
-[sub-section]
-
-table = {
-  key1: {
-    nest: "val1"
-  },
-  key2: [
-    1973-11-21T00:12:12Z,
-    {
-      "yay-man" : 23
-    }
-  ]
-}
+[package.sub.yes]
+[-]
+['&0\"5']
