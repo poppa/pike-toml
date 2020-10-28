@@ -2,6 +2,16 @@
 [table-key.dotted]
 my-false_identifier = false
 "my true identifer" = true
-"quoted identifier" = 11
+intval = 123
+"quoted identifier" = 11_000_000.45
+float = 0.12
+hex = 0xFF
+oct = 0o0734
+bin = 0b011100
+exp = 0E2
+local-time = 00:00:00.001
+full-date = 2020-12-01
+local-date-time = 2020-12-12T00:00:00
+offset-date-time = 2020-12-12T00:00:00.001+10:00
 # 'literal identifier' = 10
 # -12 = 9

@@ -1,8 +1,8 @@
-#ifdef TOML_LEXER_DEBUG
-#  define TRACE(X...)werror("%s:%d: %s",basename(__FILE__),__LINE__,sprintf(X))
-#else
-#  define TRACE(X...) 0
-#endif
+#charset utf-8
+#pike __REAL_VERSION__
+#require constant(Regexp.PCRE.Widestring)
+
+#include "lexer.h"
 
 protected Stdio.File input;
 protected int(0..) cursor = 0;
@@ -83,19 +83,22 @@ protected .Token lex_value() {
   werror("Current: %O\n", current);
 
   switch (current[0]) {
-    // "   Quotation mark
+    //
+    // "    Quotation mark
     case 0x22: {
       string value = read_quoted_string();
       return .Token("value", value, "quoted-string");
     } break;
 
-    // '   Apostrophe
+    //
+    // '    Apostrophe
     case 0x27: {
       string value = read_litteral_string();
       return .Token("value", value, "literal-string");
     } break;
 
-    // t   Expect boolean true
+    //
+    // t    Expect boolean true
     case 0x74: {
       string val = read_n_chars(3);
 
@@ -106,7 +109,8 @@ protected .Token lex_value() {
       return .Token("value", val, "boolean");
     } break;
 
-    // f   Expect boolean false
+    //
+    // f    Expect boolean false
     case 0x66: {
       string val = read_n_chars(4);
       if (val != "false") {
@@ -114,10 +118,56 @@ protected .Token lex_value() {
       }
       return .Token("value", val, "boolean");
     } break;
+
+    //
+    // 0-9  Int / Float / Date
+    case 0x30..0x39: {
+      return read_signed_number();
+    } break;
+
+    //
+    // -    Minus sign
+    case 0x2d: {
+      error("Negative numeric value\n");
+    } break;
   }
 
   exit(1, "Lex value\n");
 }
+
+protected .Token read_signed_number() {
+  // FIXME: Verfiy these are no more stop characters
+  string data = read_until((< ",", "\n", " ", "\t", "\v", "#" >));
+
+  if (has_value(data, "_")) {
+    data = replace(data, "_", "");
+  }
+
+  if (re_int->match(data)) {
+    return .Token("value", data, "int");
+  } else if (re_float->match(data)) {
+    return .Token("value", data, "float");
+  } else if (re_exp->match(data)) {
+    return .Token("value", data, "exp");
+  } else if (re_hex->match(data)) {
+    return .Token("value", data, "hex");
+  } else if (re_oct->match(data)) {
+    return .Token("value", data, "oct");
+  } else if (re_bin->match(data)) {
+    return .Token("value", data, "bin");
+  } else if (re_local_time->match(data)) {
+    return .Token("value", data, "local-time");
+  } else if (re_full_date->match(data)) {
+    return .Token("value", data, "full-date");
+  } else if (re_local_date_time->match(data)) {
+    return .Token("value", data, "local-date-time");
+  } else if (re_offset_date_time->match(data)) {
+    return .Token("value", data, "offset-date-time");
+  }
+
+  error("Read signed number: %O\n", data);
+}
+
 
 protected .Token lex_std_table() {
   expect("[");
@@ -375,6 +425,22 @@ protected string read_n_chars(int(0..) len) {
     if (!current) {
       error("Unexpected end of file\n");
     }
+  }
+
+  return buf;
+}
+
+protected string read_until(multiset(string) chars) {
+  string buf = current;
+
+  while (current) {
+    advance();
+
+    if (chars[current] || !current) {
+      break;
+    }
+
+    buf += current;
   }
 
   return buf;
