@@ -1,7 +1,7 @@
-## Table
-
 # Yup
-
-[package.sub.yes]
-[-]
-['&0\"5']
+[table-key.dotted]
+my-false_identifier = false
+"my true identifer" = true
+"quoted identifier" = 11
+# 'literal identifier' = 10
+# -12 = 9
