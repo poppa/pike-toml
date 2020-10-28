@@ -36,19 +36,21 @@ public mixed lex() {
   }
 
   if (!advance()) {
-    werror("End of file\n");
+    TRACE("End of file\n");
     return UNDEFINED;
   }
 
   TRACE("Current: %O\n", current);
 
   switch (current) {
+    // Newline
     case "\n":
       inc_line();
       return lex();
 
     // Space, vtab
     case " ":
+    case "\t":
     case "\v":
       return lex();
 
@@ -57,9 +59,11 @@ public mixed lex() {
       lex_comment();
       return lex();
 
+    // Std table
     case "[":
       return lex_std_table();
 
+    // It must be a key/value
     default:
       return lex_key_value();
   }
@@ -80,21 +84,21 @@ protected .Token lex_key_value() {
 }
 
 protected .Token lex_value() {
-  werror("Current: %O\n", current);
+  // werror("Current: %O\n", current);
 
   switch (current[0]) {
     //
     // "    Quotation mark
     case 0x22: {
       string value = read_quoted_string();
-      return .Token("value", value, "quoted-string");
+      return .Token(.Token.K_VALUE, value, "quoted-string");
     } break;
 
     //
     // '    Apostrophe
     case 0x27: {
       string value = read_litteral_string();
-      return .Token("value", value, "literal-string");
+      return .Token(.Token.K_VALUE, value, "literal-string");
     } break;
 
     //
@@ -106,7 +110,7 @@ protected .Token lex_value() {
         error("Expected boolean true, got %O\n", val);
       }
 
-      return .Token("value", val, "boolean");
+      return .Token(.Token.K_VALUE, val, "boolean");
     } break;
 
     //
@@ -116,7 +120,7 @@ protected .Token lex_value() {
       if (val != "false") {
         error("Expected boolean false, got %O\n", val);
       }
-      return .Token("value", val, "boolean");
+      return .Token(.Token.K_VALUE, val, "boolean");
     } break;
 
     //
@@ -144,25 +148,25 @@ protected .Token read_signed_number() {
   }
 
   if (re_int->match(data)) {
-    return .Token("value", data, "int");
+    return .Token(.Token.K_VALUE, data, "int");
   } else if (re_float->match(data)) {
-    return .Token("value", data, "float");
+    return .Token(.Token.K_VALUE, data, "float");
   } else if (re_exp->match(data)) {
-    return .Token("value", data, "exp");
+    return .Token(.Token.K_VALUE, data, "exp");
   } else if (re_hex->match(data)) {
-    return .Token("value", data, "hex");
+    return .Token(.Token.K_VALUE, data, "hex");
   } else if (re_oct->match(data)) {
-    return .Token("value", data, "oct");
+    return .Token(.Token.K_VALUE, data, "oct");
   } else if (re_bin->match(data)) {
-    return .Token("value", data, "bin");
+    return .Token(.Token.K_VALUE, data, "bin");
   } else if (re_local_time->match(data)) {
-    return .Token("value", data, "local-time");
+    return .Token(.Token.K_VALUE, data, "local-time");
   } else if (re_full_date->match(data)) {
-    return .Token("value", data, "full-date");
+    return .Token(.Token.K_VALUE, data, "full-date");
   } else if (re_local_date_time->match(data)) {
-    return .Token("value", data, "local-date-time");
+    return .Token(.Token.K_VALUE, data, "local-date-time");
   } else if (re_offset_date_time->match(data)) {
-    return .Token("value", data, "offset-date-time");
+    return .Token(.Token.K_VALUE, data, "offset-date-time");
   }
 
   error("Read signed number: %O\n", data);
@@ -172,7 +176,7 @@ protected .Token read_signed_number() {
 protected .Token lex_std_table() {
   expect("[");
 
-  .Token t = .Token("std-table-open", "[");
+  .Token t = .Token(.Token.K_STD_TABLE_OPEN, "[");
 
   .Token key = lex_key();
   token_queue->put(key);
@@ -190,13 +194,12 @@ protected .Token lex_std_table() {
 
   expect("]");
 
-  token_queue->put(.Token("std-table-close", "]"));
+  token_queue->put(.Token(.Token.K_STD_TABLE_CLOSE, "]"));
 
   return t;
 }
 
 protected .Token lex_key() {
-  string kind = "key";
   string modifier;
   string value;
 
@@ -211,11 +214,7 @@ protected .Token lex_key() {
       value = read_litteral_string();
       break;
 
-    case '-':
-    case '0'..'9':
-    case 'A'..'Z':
-    case '_':
-    case 'a'..'z':
+    CASE_VALID_KEY_CHARS:
       value = read_unquoted_key();
       break;
 
@@ -223,7 +222,7 @@ protected .Token lex_key() {
       error("Unexpected character %O\n", current);
   }
 
-  return .Token(kind, value, modifier);
+  return .Token(.Token.K_KEY, value, modifier);
 }
 
 protected string read_unquoted_key() {
@@ -232,11 +231,7 @@ protected string read_unquoted_key() {
 
   loop: while (current) {
     switch (current[0]) {
-      case '-':
-      case '0'..'9':
-      case 'A'..'Z':
-      case '_':
-      case 'a'..'z':
+      CASE_VALID_KEY_CHARS:
         push(current);
         advance();
         break;

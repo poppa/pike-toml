@@ -10,6 +10,13 @@
 #define REGEX Regexp.PCRE.Widestring
 #define CASELESS Regexp.PCRE.OPTION.CASELESS
 
+#define CASE_VALID_KEY_CHARS \
+  case '-': \
+  case '0'..'9': \
+  case 'A'..'Z': \
+  case '_': \
+  case 'a'..'z'
+
 protected REGEX re_int = REGEX("^(0|[1-9][0-9]*)$");
 protected REGEX re_float = REGEX("^(0\\.|[1-9][0-9]*\\.)[0-9]+$");
 protected REGEX re_exp = REGEX("^([0]|[1-9][0-9]*)[eE][0-9]+");
