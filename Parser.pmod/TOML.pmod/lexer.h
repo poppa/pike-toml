@@ -52,4 +52,16 @@ protected REGEX re_full_date = REGEX("^(" + full_date + ")$");
 protected REGEX re_local_date_time = REGEX("^(" + local_date_time + ")$");
 protected REGEX re_offset_date_time = REGEX("^(" + offset_date_time + ")$" );
 
+#define SET_STATE_KEY() lex_state = STATE_KEY
+#define SET_STATE_VALUE() lex_state = STATE_VALUE
+
+#define EAT_COMMENT()                             \
+  do {                                            \
+    eat_whitespace_and_nl();                      \
+    if (current == "#") {                         \
+      lex_comment();                              \
+      eat_whitespace_and_nl();                    \
+    }                                             \
+  } while (0)
+
 #endif

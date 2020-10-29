@@ -11,6 +11,13 @@ protected int(0..) column = 1;
 protected string current;
 protected ADT.Queue token_queue = ADT.Queue();
 
+protected enum LexState {
+  STATE_KEY = 1,
+  STATE_VALUE = 2,
+}
+
+protected LexState lex_state = STATE_KEY;
+
 protected void create(Stdio.File | string input) {
   if (stringp(input)) {
     input = Stdio.FakeFile(input);
@@ -62,26 +69,34 @@ public mixed lex() {
       lex_comment();
       return lex();
 
-    // Std table
-    case "[":
-      return lex_std_table();
+    // Std table / array
+    case "[": {
+      if (lex_state == STATE_KEY) {
+        return lex_std_table();
+      } else if (lex_state == STATE_VALUE) {
+        return lex_value();
+      }
+    }
 
     // It must be a key/value
-    default:
-      return lex_key_value();
+    default: {
+      if (lex_state == STATE_KEY) {
+        return lex_key();
+      } else if (lex_state == STATE_VALUE) {
+        return lex_value();
+      }
+    }
   }
 
   error("Unexpected character %O\n", current);
 }
 
-protected .Token lex_key_value() {
-  .Token key = lex_key();
+protected .Token lex_key() {
+  .Token key = lex_key_low();
   eat_whitespace();
   expect("=");
-  eat_whitespace();
-  .Token value = lex_value();
 
-  token_queue->put(value);
+  SET_STATE_VALUE();
 
   return key;
 }
@@ -89,8 +104,16 @@ protected .Token lex_key_value() {
 protected .Token lex_value() {
   switch (current[0]) {
     //
+    // [    Array start
+    case 0x5b: {
+      SET_STATE_KEY();
+      return lex_array_value();
+    } break;
+
+    //
     // "    Quotation mark
     case 0x22: {
+      SET_STATE_KEY();
       string value = read_quoted_string();
       return .Token(.Token.K_VALUE, value, "quoted-string");
     } break;
@@ -98,6 +121,7 @@ protected .Token lex_value() {
     //
     // '    Apostrophe
     case 0x27: {
+      SET_STATE_KEY();
       string value = read_litteral_string();
       return .Token(.Token.K_VALUE, value, "literal-string");
     } break;
@@ -111,11 +135,51 @@ protected .Token lex_value() {
     case 0x69:          // i    Expect inf
     case 0x74:          // t    Expect boolean true
     case 0x30..0x39: {  // 0-9  Int / Float / Date
+      SET_STATE_KEY();
       return lex_literal_value();
     } break;
   }
 
   exit(1, "Lex value\n");
+}
+
+protected .Token lex_array_value() {
+  expect("[");
+
+  .Token ret = .Token(.Token.K_ARRAY_OPEN, "[");
+
+  while (current) {
+    EAT_COMMENT();
+
+    // Catch empty arrays
+    if (current == "]") {
+      break;
+    }
+
+    .Token tok = lex_value();
+
+    eat_whitespace_and_nl();
+
+    expect((< ",", "]", "#" >), true);
+
+    token_queue->put(tok);
+
+    EAT_COMMENT();
+
+    if (current == "]") {
+      break;
+    }
+
+    advance();
+
+    EAT_COMMENT();
+  }
+
+  expect("]");
+
+  token_queue->put(.Token(.Token.K_ARRAY_CLOSE, "]"));
+
+  return ret;
 }
 
 protected .Token lex_literal_value() {
@@ -162,7 +226,7 @@ protected .Token lex_std_table() {
 
   .Token t = .Token(.Token.K_STD_TABLE_OPEN, "[");
 
-  .Token key = lex_key();
+  .Token key = lex_key_low();
   token_queue->put(key);
 
   if (current == ".") {
@@ -170,20 +234,20 @@ protected .Token lex_std_table() {
 
     while (current == ".") {
       advance();
-      .Token lt = lex_key();
+      .Token lt = lex_key_low();
       lt->modifier = "dotted";
       token_queue->put(lt);
     }
   }
 
-  expect("]");
+  expect("]", false);
 
   token_queue->put(.Token(.Token.K_STD_TABLE_CLOSE, "]"));
 
   return t;
 }
 
-protected .Token lex_key() {
+protected .Token lex_key_low() {
   string modifier;
   string value;
 
@@ -323,11 +387,6 @@ protected void lex_comment() {
       break;
     }
   }
-
-  // Let the main lex() method take care of newlines
-  if (current == "\n") {
-    push_back();
-  }
 }
 
 protected void push_back(int n) {
@@ -389,7 +448,13 @@ protected variant string look_behind() {
 }
 
 protected void eat_whitespace() {
-  while ((<" ", "\t", "\v">)[current]) {
+  while ((< " ", "\t", "\v" >)[current]) {
+    advance();
+  }
+}
+
+protected void eat_whitespace_and_nl() {
+  while ((< " ", "\t", "\v", "\n" >)[current]) {
     advance();
   }
 }

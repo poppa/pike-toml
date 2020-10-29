@@ -4,6 +4,8 @@ public enum Kind {
   K_VALUE,
   K_STD_TABLE_OPEN,
   K_STD_TABLE_CLOSE,
+  K_ARRAY_OPEN,
+  K_ARRAY_CLOSE,
 }
 
 public mapping(int:string) kind_map = ([
@@ -12,6 +14,8 @@ public mapping(int:string) kind_map = ([
   K_VALUE : "value",
   K_STD_TABLE_OPEN : "std-table-open",
   K_STD_TABLE_CLOSE : "std-table-close",
+  K_ARRAY_OPEN: "array-open",
+  K_ARRAY_CLOSE: "array-close",
 ]);
 
 public enum Modifier {
