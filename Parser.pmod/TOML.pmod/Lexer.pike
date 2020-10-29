@@ -219,7 +219,7 @@ protected .Token lex_literal_value() {
 protected .Token lex_std_table() {
   expect("[");
 
-  .Token t = .Token(.Token.K_STD_TABLE_OPEN, "[");
+  .Token tok_open = .Token(.Token.K_STD_TABLE_OPEN, "[");
 
   .Token key = lex_key_low();
   token_queue->put(key);
@@ -239,7 +239,7 @@ protected .Token lex_std_table() {
 
   token_queue->put(.Token(.Token.K_STD_TABLE_CLOSE, "]"));
 
-  return t;
+  return tok_open;
 }
 
 protected .Token lex_key_low() {
