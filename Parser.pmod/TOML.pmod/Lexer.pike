@@ -157,22 +157,17 @@ protected .Token lex_array_value() {
     }
 
     .Token tok = lex_value();
-
-    eat_whitespace_and_nl();
-
-    expect((< ",", "]", "#" >), true);
-
     token_queue->put(tok);
 
     EAT_COMMENT();
+
+    expect((< ",", "]" >), true);
 
     if (current == "]") {
       break;
     }
 
     advance();
-
-    EAT_COMMENT();
   }
 
   expect("]");

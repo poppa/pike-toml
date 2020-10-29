@@ -21,8 +21,10 @@
 
 simple-array = [ "one", 'two', 'three' ]
 complex-array = [
+  # Before
   "one", # First
   # Second
   'two',
   'three'# Third
+  # More
 ]

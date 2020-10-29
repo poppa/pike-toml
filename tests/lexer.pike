@@ -3,7 +3,7 @@
 
 #include "test.h"
 
-constant DATA = #string "Cargo.toml";
+constant DATA = #string "simple1.toml";
 
 int main() {
   TOML.Lexer lexer = TOML.Lexer(DATA);

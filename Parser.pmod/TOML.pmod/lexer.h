@@ -58,7 +58,7 @@ protected REGEX re_offset_date_time = REGEX("^(" + offset_date_time + ")$" );
 #define EAT_COMMENT()                             \
   do {                                            \
     eat_whitespace_and_nl();                      \
-    if (current == "#") {                         \
+    while (current == "#") {                      \
       lex_comment();                              \
       eat_whitespace_and_nl();                    \
     }                                             \
