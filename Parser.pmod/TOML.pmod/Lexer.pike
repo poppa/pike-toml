@@ -23,6 +23,10 @@ public string advance() {
   current = input->read(1);
 
   if (current != "") {
+    if (current == "\n") {
+      inc_line();
+    }
+
     column += 1;
     return current;
   }
@@ -45,10 +49,9 @@ public mixed lex() {
   switch (current) {
     // Newline
     case "\n":
-      inc_line();
       return lex();
 
-    // Space, vtab
+    // Space, tab, vtab
     case " ":
     case "\t":
     case "\v":
@@ -84,8 +87,6 @@ protected .Token lex_key_value() {
 }
 
 protected .Token lex_value() {
-  // werror("Current: %O\n", current);
-
   switch (current[0]) {
     //
     // "    Quotation mark
@@ -102,52 +103,32 @@ protected .Token lex_value() {
     } break;
 
     //
-    // t    Expect boolean true
-    case 0x74: {
-      string val = read_n_chars(3);
-
-      if (val != "true") {
-        error("Expected boolean true, got %O\n", val);
-      }
-
-      return .Token(.Token.K_VALUE, val, "boolean");
-    } break;
-
-    //
-    // f    Expect boolean false
-    case 0x66: {
-      string val = read_n_chars(4);
-      if (val != "false") {
-        error("Expected boolean false, got %O\n", val);
-      }
-      return .Token(.Token.K_VALUE, val, "boolean");
-    } break;
-
-    //
-    // 0-9  Int / Float / Date
-    case 0x30..0x39: {
-      return read_signed_number();
-    } break;
-
-    //
-    // -    Minus sign
-    case 0x2d: {
-      error("Negative numeric value\n");
+    // Meat of the potato
+    case 0x2b:          // +    Plus sign
+    case 0x2d:          // -    Minus sign
+    case 0x6e:          // n    Expect nan
+    case 0x66:          // f    Expect boolean false
+    case 0x69:          // i    Expect inf
+    case 0x74:          // t    Expect boolean true
+    case 0x30..0x39: {  // 0-9  Int / Float / Date
+      return lex_literal_value();
     } break;
   }
 
   exit(1, "Lex value\n");
 }
 
-protected .Token read_signed_number() {
-  // FIXME: Verfiy these are no more stop characters
+protected .Token lex_literal_value() {
+  // FIXME: Verfiy there are no more stop characters
   string data = read_until((< ",", "\n", " ", "\t", "\v", "#" >));
 
   if (has_value(data, "_")) {
     data = replace(data, "_", "");
   }
 
-  if (re_int->match(data)) {
+  if (data == "false" || data == "true") {
+    return .Token(.Token.K_VALUE, data, "bool");
+  } else if (re_int->match(data)) {
     return .Token(.Token.K_VALUE, data, "int");
   } else if (re_float->match(data)) {
     return .Token(.Token.K_VALUE, data, "float");
@@ -159,6 +140,10 @@ protected .Token read_signed_number() {
     return .Token(.Token.K_VALUE, data, "oct");
   } else if (re_bin->match(data)) {
     return .Token(.Token.K_VALUE, data, "bin");
+  } else if (re_inf->match(data)) {
+    return .Token(.Token.K_VALUE, data, "inf");
+  } else if (re_nan->match(data)) {
+    return .Token(.Token.K_VALUE, data, "nan");
   } else if (re_local_time->match(data)) {
     return .Token(.Token.K_VALUE, data, "local-time");
   } else if (re_full_date->match(data)) {
@@ -169,9 +154,8 @@ protected .Token read_signed_number() {
     return .Token(.Token.K_VALUE, data, "offset-date-time");
   }
 
-  error("Read signed number: %O\n", data);
+  error("Unhandled value: %O\n", data);
 }
-
 
 protected .Token lex_std_table() {
   expect("[");

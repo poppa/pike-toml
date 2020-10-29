@@ -17,12 +17,14 @@
   case '_': \
   case 'a'..'z'
 
-protected REGEX re_int = REGEX("^(0|[1-9][0-9]*)$");
-protected REGEX re_float = REGEX("^(0\\.|[1-9][0-9]*\\.)[0-9]+$");
-protected REGEX re_exp = REGEX("^([0]|[1-9][0-9]*)[eE][0-9]+");
-protected REGEX re_hex = REGEX("^0x[0-9A-F]+$", CASELESS);
-protected REGEX re_oct = REGEX("^0o[0-7]+$");
-protected REGEX re_bin = REGEX("^0b[0-1]+$");
+protected REGEX re_int = REGEX("^[-+]?(0|[1-9][0-9]*)$");
+protected REGEX re_float = REGEX("^[-+]?(0\\.|[1-9][0-9]*\\.)[0-9]+$");
+protected REGEX re_exp = REGEX("^[-+]?([0]|[1-9][0-9]*)[eE][0-9]+");
+protected REGEX re_hex = REGEX("^[-+]?0x[0-9A-F]+$", CASELESS);
+protected REGEX re_oct = REGEX("^[-+]?0o[0-7]+$");
+protected REGEX re_bin = REGEX("^[-+]?0b[0-1]+$");
+protected REGEX re_inf = REGEX("^[-+]?inf$");
+protected REGEX re_nan = REGEX("^[-+]?nan$");
 
 protected string full_date
   = "(\\d{4})" + "-" // year
