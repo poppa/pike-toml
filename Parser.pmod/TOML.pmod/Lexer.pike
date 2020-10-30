@@ -120,7 +120,9 @@ public mixed lex() {
 
       if (IS_STATE_KEY()) {
         TRACE("lex key\n");
-        return lex_key();
+        .Token tok = lex_key();
+        // push_back();
+        return tok;
       } else if (IS_STATE_VALUE()) {
         TRACE(">> lex value\n");
         .Token tok = lex_value();
@@ -138,9 +140,11 @@ public mixed lex() {
 protected .Token lex_key() {
   .Token key = lex_key_low();
   eat_whitespace();
-  expect("=");
+  // FIXME: Same as in lex_inline_table()
+  expect("=", true);
 
   SET_STATE_VALUE();
+
 
   return key;
 }
