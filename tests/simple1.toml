@@ -42,6 +42,7 @@
 # #   '''
 
 root-str = "I am Root"
+root-flt = 1.2e-3
 
 [key.sub]
 float = 1.23
@@ -51,5 +52,5 @@ str = 'ney'
 int = 12
 str = "yay"
 
-[key.sub.sam]
+[ key . sub . sam ]
 str = 'way'

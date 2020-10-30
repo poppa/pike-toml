@@ -31,7 +31,7 @@ public mixed parse(Lexer lexer) {
       case Token.K_KEY: {
         Token val = lexer->lex();
         expect_value(val);
-        p[tok->value] = val->real_value();
+        p[tok->value] = val->pike_value();
       } break;
 
       //

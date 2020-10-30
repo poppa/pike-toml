@@ -197,7 +197,7 @@ public int
   | object(Calendar.Time)
   | object(Calendar.ISO)
   | string(8bit)
-  | bool real_value()
+  | bool pike_value()
 {
   if (!is_value()) {
     return value;
