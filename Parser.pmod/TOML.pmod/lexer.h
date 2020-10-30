@@ -17,9 +17,11 @@
   case '_': \
   case 'a'..'z'
 
+protected string float_p = "[-+]?(0\\.|[1-9][0-9]*\\.)[0-9]+";
+
 protected REGEX re_int = REGEX("^[-+]?(0|[1-9][0-9]*)$");
-protected REGEX re_float = REGEX("^[-+]?(0\\.|[1-9][0-9]*\\.)[0-9]+$");
-protected REGEX re_exp = REGEX("^[-+]?([0]|[1-9][0-9]*)[eE]-?[0-9]+");
+protected REGEX re_float = REGEX("^[-+]?" + float_p + "$");
+protected REGEX re_exp = REGEX("^[-+]?" + float_p + "[eE]-?[0-9]+");
 protected REGEX re_hex = REGEX("^[-+]?0x[0-9A-F]+$", CASELESS);
 protected REGEX re_oct = REGEX("^[-+]?0o[0-7]+$");
 protected REGEX re_bin = REGEX("^[-+]?0b[0-1]+$");
