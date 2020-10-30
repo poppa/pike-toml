@@ -68,8 +68,14 @@ public bool is_key() {
   return is_kind(K_KEY);
 }
 
-public bool is_value() {
-  return is_kind(K_VALUE);
+public bool is_value(Modifier|void modifier) {
+  bool is = is_kind(K_VALUE);
+
+  if (is && modifier) {
+    return is_modifier(modifier);
+  }
+
+  return is;
 }
 
 public bool is_standard_table_open() {
@@ -180,6 +186,68 @@ protected string modifer_to_string() {
   }
 
   return s * "|";
+}
+
+public string kind_to_string() {
+  return kind_map[kind];
+}
+
+public int
+  | float
+  | object(Calendar.Time)
+  | object(Calendar.ISO)
+  | string(8bit)
+  | bool real_value()
+{
+  if (!is_value()) {
+    return value;
+  }
+
+  if (is_modifier(M_NUMBER)) {
+    return render_number();
+  } else if (is_modifier(M_DATE)) {
+    return render_date();
+  } else if (is_modifier(M_BOOLEAN)) {
+    return value == "true";
+  } else {
+    return value;
+  }
+}
+
+protected int|float render_number() {
+  if (is_modifier(M_INT)) {
+    return (int)value;
+  }
+
+  if (is_modifier(M_FLOAT)) {
+    return (float)value;
+  }
+
+  if (is_modifier(M_HEX)) {
+    sscanf(value, "%D", int v);
+    return v;
+  }
+
+  if (is_modifier(M_BIN)) {
+    sscanf(value, "%D", int v);
+    return v;
+  }
+
+  if (is_modifier(M_OCT)) {
+    string tmp = replace(replace(value, "O", "o"), "o", "");
+    sscanf(tmp, "%D", int v);
+    return v;
+  }
+
+  if (is_modifier(M_EXP)) {
+    return (float)value;
+  }
+
+  error("Unhandled number type %O\n", modifer_to_string());
+}
+
+protected object(Calendar.Time)|object(Calendar.ISO) render_date() {
+  return Calendar.dwim_time(value);
 }
 
 protected string _sprintf(int t) {

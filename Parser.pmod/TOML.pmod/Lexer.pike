@@ -35,7 +35,7 @@ protected void create(Stdio.File | string input) {
   this::input = input;
 }
 
-public string advance() {
+protected string advance() {
   current = input->read(1);
 
   if (current != "") {
@@ -50,7 +50,19 @@ public string advance() {
   return UNDEFINED;
 }
 
+protected ADT.Queue peek_queue = ADT.Queue();
+
+public .Token peek_token() {
+  .Token t = lex();
+  peek_queue->put(t);
+  return t;
+}
+
 public mixed lex() {
+  if (sizeof(peek_queue)) {
+    return peek_queue->get();
+  }
+
   if (sizeof(token_queue)) {
     return token_queue->get();
   }

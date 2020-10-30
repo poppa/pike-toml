@@ -1,12 +1,18 @@
 # Yup
-# [key]
 # [ table-key ]
 # [ table-key.dotted ]
-
 # my-false_identifier = false
 # "my true identifer" = true
 # intval = 123
 # "quoted identifier" = 11_000_000.45
+# qstr = "Quoted string"
+# lstr = 'Literal string'
+# hex = 0xFF
+# bin = 0b1011
+# oct = 0o0111
+# exp = 1e-2
+# swestr = "Lök på laxen å dä"
+# emoji = "😂"
 # float = 0.12
 # hex = 0xFF
 # oct = 0o0734
@@ -22,15 +28,28 @@
 # neginf = -inf
 # negnan = -nan
 
-key1=1
-key2= 1
+# key1=1
+# key2= 1
 # simple-array = [ 'true' , "false"  ]
 # simple-table = {version = "2.0.0", nested-table = { sub = 1},  optional = true }
 
-# mulquotstr = """
-#   This is some
-#   multiline string with a " single quote in it"""
+# # mulquotstr = """
+# #   This is some
+# #   multiline string with a " single quote in it"""
 
-# mullitstr = '''
-#   A multiline with literal's
-#   '''
+# # mullitstr = '''
+# #   A multiline with literal's
+# #   '''
+
+
+
+[key.sub]
+float = 1.23
+str = 'ney'
+
+[key]
+int = 12
+str = "yay"
+
+[key.sub.sam]
+str = 'way'
