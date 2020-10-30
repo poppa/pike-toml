@@ -3,7 +3,7 @@
 
 #include "test.h"
 
-constant DATA = #string "Cargo.toml";
+Stdio.File DATA = Stdio.File(combine_path(__DIR__, "Cargo.toml"));
 
 int main() {
   TOML.Lexer lexer = TOML.Lexer(DATA);
