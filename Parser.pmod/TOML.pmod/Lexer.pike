@@ -162,13 +162,24 @@ protected .Token lex_value() {
     //
     // "    Quotation mark
     case 0x22: {
+      if (peek(2) == "\"\"") {
+        string value = read_multiline_quoted_string();
+        return .Token(.Token.K_VALUE, value, "mul-quoted-string");
+      }
+
       string value = read_quoted_string();
+
       return .Token(.Token.K_VALUE, value, "quoted-string");
     } break;
 
     //
     // '    Apostrophe
     case 0x27: {
+      if (peek(2) == "''") {
+        string value = read_multiline_literal_string();
+        return .Token(.Token.K_VALUE, value, "mul-literal-string");
+      }
+
       string value = read_litteral_string();
       return .Token(.Token.K_VALUE, value, "literal-string");
     } break;
@@ -402,6 +413,56 @@ protected string read_quoted_string() {
   } while (current != "\"");
 
   expect("\"");
+
+  return (string)buf;
+}
+
+// FIXME: Adhere to ABNF
+protected string read_multiline_quoted_string() {
+  expect("\"");
+  expect("\"");
+  expect("\"");
+
+  String.Buffer buf = String.Buffer();
+  function push = buf->add;
+
+  while (current) {
+    if (current == "\"" && peek(2) == "\"\"") {
+      break;
+    }
+
+    push(current);
+    advance();
+  }
+
+  expect("\"");
+  expect("\"");
+  expect("\"");
+
+  return (string)buf;
+}
+
+// FIXME: Adhere to ABNF
+protected string read_multiline_literal_string() {
+  expect("'");
+  expect("'");
+  expect("'");
+
+  String.Buffer buf = String.Buffer();
+  function push = buf->add;
+
+  while (current) {
+    if (current == "'" && peek(2) == "''") {
+      break;
+    }
+
+    push(current);
+    advance();
+  }
+
+  expect("'");
+  expect("'");
+  expect("'");
 
   return (string)buf;
 }

@@ -23,5 +23,11 @@
 
 # simple-array = [ 'true' , "false"  ]
 # simple-table = {version = "2.0.0", nested-table = { sub = 1},  optional = true }
-[[ std ]]
-[[ std . array ]]
+
+mulquotstr = """
+  This is some
+  multiline string with a " single quote in it"""
+
+mullitstr = '''
+  A multiline with literal's
+  '''
