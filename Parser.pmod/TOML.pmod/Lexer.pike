@@ -56,7 +56,6 @@ public mixed lex() {
   }
 
   if (!advance()) {
-    TRACE("End of file\n");
     return UNDEFINED;
   }
 
@@ -67,16 +66,12 @@ public mixed lex() {
   }
 
   if (sizeof(ctx_stack)) {
-    TRACE("Has ctx stack: %O\n", sizeof(ctx_stack));
-
     int top = ctx_stack->top();
 
     if (top == CTX_ARRAY) {
       lex_state = STATE_VALUE;
     }
   }
-
-  TRACE("# current: %O\n", current);
 
   switch (current) {
     case "}": {
@@ -99,35 +94,24 @@ public mixed lex() {
     case "[": {
       if (IS_STATE_KEY()) {
         if (peek() == "[") {
-          TRACE(">> std array");
           return lex_std_array();
         }
 
-        TRACE(">> std table\n");
         return lex_std_table();
       } else if (IS_STATE_VALUE()) {
-        TRACE(">> array\n");
         .Token tok = lex_value();
-        TRACE("<< %O\n", tok);
-        // SET_STATE_VALUE();
         return tok;
       }
     }
 
     // It must be a key/value
     default: {
-      TRACE("State in default: %O\n", lex_state);
-
       if (IS_STATE_KEY()) {
-        TRACE("lex key\n");
         .Token tok = lex_key();
-        // push_back();
         return tok;
       } else if (IS_STATE_VALUE()) {
-        TRACE(">> lex value\n");
         .Token tok = lex_value();
         push_back();
-        TRACE("<< lex value: %O : %O\n", tok, current);
         SET_STATE_KEY();
         return tok;
       }
@@ -144,7 +128,6 @@ protected .Token lex_key() {
   expect("=", true);
 
   SET_STATE_VALUE();
-
 
   return key;
 }
@@ -231,8 +214,6 @@ protected .Token lex_array_value() {
 protected .Token lex_literal_value() {
   // FIXME: Verfiy there are no more stop characters
   string data = read_until((< ",", "\n", " ", "\t", "\v", "#", "]", "}" >));
-
-  TRACE("Read data: %O\n", data);
 
   if (has_value(data, "_")) {
     data = replace(data, "_", "");
