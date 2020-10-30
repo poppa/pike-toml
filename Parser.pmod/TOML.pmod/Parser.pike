@@ -4,7 +4,6 @@ protected constant Lexer = .Lexer;
 protected constant Token = .Token;
 protected typedef array(Token) TokenArray;
 
-
 public mixed parse_file(Stdio.File file) {
   return this::parse(Lexer(file));
 }
