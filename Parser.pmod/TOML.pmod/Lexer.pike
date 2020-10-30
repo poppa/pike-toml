@@ -546,9 +546,15 @@ protected string read_until(multiset(string) chars) {
   return buf;
 }
 
-protected string peek() {
+protected string peek(int n) {
   int pos = input->tell();
-  string v = input->read(1);
+  string v = input->read(n);
+
   input->seek(pos, Stdio.SEEK_SET);
+
   return v;
+}
+
+protected variant peek() {
+  this::peek(1);
 }
