@@ -7,8 +7,12 @@ constant DATA = #string "simple1.toml";
 
 int main() {
   TOML.Lexer lexer = TOML.Lexer(DATA);
+  array(TOML.Token) toks = ({});
 
   while (TOML.Token tok = lexer->lex()) {
-    werror("> lexing: %O\n", tok);
+    werror("::::::::: %O\n", tok);
+    toks += ({ tok });
   }
+
+  // werror("All tokens: %O\n", toks);
 }

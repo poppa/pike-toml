@@ -2,7 +2,7 @@
 #define TOML_LEXER_H
 
 #ifdef TOML_LEXER_DEBUG
-#  define TRACE(X...)werror("%s:%d: %s",basename(__FILE__),__LINE__,sprintf(X))
+#  define TRACE(X...)werror("%s:%-4d: %s",basename(__FILE__),__LINE__,sprintf(X))
 #else
 #  define TRACE(X...) 0
 #endif
@@ -54,6 +54,14 @@ protected REGEX re_offset_date_time = REGEX("^(" + offset_date_time + ")$" );
 
 #define SET_STATE_KEY() lex_state = STATE_KEY
 #define SET_STATE_VALUE() lex_state = STATE_VALUE
+#define IS_STATE_KEY() lex_state == STATE_KEY
+#define IS_STATE_VALUE() lex_state == STATE_VALUE
+#define POP_CTX_STACK()         \
+  do {                          \
+    if (sizeof(ctx_stack)) {    \
+      ctx_stack->pop();         \
+    }                           \
+  } while (0)
 
 #define EAT_COMMENT()                             \
   do {                                            \

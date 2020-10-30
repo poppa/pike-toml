@@ -12,11 +12,20 @@ protected string current;
 protected ADT.Queue token_queue = ADT.Queue();
 
 protected enum LexState {
-  STATE_KEY = 1,
-  STATE_VALUE = 2,
+  STATE_NONE,
+  STATE_KEY,
+  STATE_VALUE,
 }
 
 protected LexState lex_state = STATE_KEY;
+
+protected enum Ctx {
+  CTX_NONE,
+  CTX_ARRAY,
+  CTX_TABLE,
+}
+
+protected ADT.Stack ctx_stack = ADT.Stack();
 
 protected void create(Stdio.File | string input) {
   if (stringp(input)) {
@@ -51,39 +60,69 @@ public mixed lex() {
     return UNDEFINED;
   }
 
-  TRACE("Current: %O\n", current);
+  EAT_COMMENT();
+
+  if (current == "") {
+    return UNDEFINED;
+  }
+
+  if (sizeof(ctx_stack)) {
+    TRACE("Has ctx stack: %O\n", sizeof(ctx_stack));
+
+    int top = ctx_stack->top();
+
+    if (top == CTX_ARRAY) {
+      lex_state = STATE_VALUE;
+    }
+  }
+
+  TRACE("# current: %O\n", current);
 
   switch (current) {
-    // Newline
-    case "\n":
-      return lex();
+    case "}": {
+      POP_CTX_STACK();
+      SET_STATE_KEY();
+      return .Token(.Token.K_INLINE_TBL_CLOSE, "}");
+    } break;
 
-    // Space, tab, vtab
-    case " ":
-    case "\t":
-    case "\v":
-      return lex();
+    case "]": {
+      POP_CTX_STACK();
+      SET_STATE_KEY();
+      return .Token(.Token.K_ARRAY_CLOSE, "]");
+    } break;
 
-    // Comment start
-    case "#":
-      lex_comment();
+    case ",": {
       return lex();
+    } break;
 
     // Std table / array
     case "[": {
-      if (lex_state == STATE_KEY) {
+      if (IS_STATE_KEY()) {
+        TRACE(">> std table\n");
         return lex_std_table();
-      } else if (lex_state == STATE_VALUE) {
-        return lex_value();
+      } else if (IS_STATE_VALUE()) {
+        TRACE(">> array\n");
+        .Token tok = lex_value();
+        TRACE("<< %O\n", tok);
+        // SET_STATE_VALUE();
+        return tok;
       }
     }
 
     // It must be a key/value
     default: {
-      if (lex_state == STATE_KEY) {
+      TRACE("State in default: %O\n", lex_state);
+
+      if (IS_STATE_KEY()) {
+        TRACE("lex key\n");
         return lex_key();
-      } else if (lex_state == STATE_VALUE) {
-        return lex_value();
+      } else if (IS_STATE_VALUE()) {
+        TRACE(">> lex value\n");
+        .Token tok = lex_value();
+        push_back();
+        TRACE("<< lex value: %O : %O\n", tok, current);
+        SET_STATE_KEY();
+        return tok;
       }
     }
   }
@@ -106,14 +145,18 @@ protected .Token lex_value() {
     //
     // [    Array start
     case 0x5b: {
-      SET_STATE_KEY();
       return lex_array_value();
+    } break;
+
+    //
+    // {    Inline table start
+    case 0x7b: {
+      return lex_inline_table();
     } break;
 
     //
     // "    Quotation mark
     case 0x22: {
-      SET_STATE_KEY();
       string value = read_quoted_string();
       return .Token(.Token.K_VALUE, value, "quoted-string");
     } break;
@@ -121,7 +164,6 @@ protected .Token lex_value() {
     //
     // '    Apostrophe
     case 0x27: {
-      SET_STATE_KEY();
       string value = read_litteral_string();
       return .Token(.Token.K_VALUE, value, "literal-string");
     } break;
@@ -135,7 +177,6 @@ protected .Token lex_value() {
     case 0x69:          // i    Expect inf
     case 0x74:          // t    Expect boolean true
     case 0x30..0x39: {  // 0-9  Int / Float / Date
-      SET_STATE_KEY();
       return lex_literal_value();
     } break;
   }
@@ -143,43 +184,35 @@ protected .Token lex_value() {
   exit(1, "Lex value\n");
 }
 
+protected .Token lex_inline_table() {
+  expect("{", true);
+
+  .Token tok_ret = .Token(.Token.K_INLINE_TBL_OPEN, "{");
+  SET_STATE_KEY();
+  ctx_stack->push(CTX_TABLE);
+
+  // FIXME: This is needed since we do a push_back() after lexing a value.
+  //        Find a solution where none of this is neccessary.
+  advance();
+
+  return tok_ret;
+}
+
 protected .Token lex_array_value() {
-  expect("[");
+  expect("[", true);
 
   .Token ret = .Token(.Token.K_ARRAY_OPEN, "[");
-
-  while (current) {
-    EAT_COMMENT();
-
-    // Catch empty arrays
-    if (current == "]") {
-      break;
-    }
-
-    .Token tok = lex_value();
-    token_queue->put(tok);
-
-    EAT_COMMENT();
-
-    expect((< ",", "]" >), true);
-
-    if (current == "]") {
-      break;
-    }
-
-    advance();
-  }
-
-  expect("]");
-
-  token_queue->put(.Token(.Token.K_ARRAY_CLOSE, "]"));
+  SET_STATE_VALUE();
+  ctx_stack->push(CTX_ARRAY);
 
   return ret;
 }
 
 protected .Token lex_literal_value() {
   // FIXME: Verfiy there are no more stop characters
-  string data = read_until((< ",", "\n", " ", "\t", "\v", "#" >));
+  string data = read_until((< ",", "\n", " ", "\t", "\v", "#", "]", "}" >));
+
+  TRACE("Read data: %O\n", data);
 
   if (has_value(data, "_")) {
     data = replace(data, "_", "");
@@ -386,6 +419,7 @@ protected void lex_comment() {
 
 protected void push_back(int n) {
   input->seek(-n, Stdio.SEEK_CUR);
+  column -= n;
 }
 
 protected variant void push_back() {

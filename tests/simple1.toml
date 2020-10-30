@@ -19,12 +19,5 @@
 # neginf = -inf
 # negnan = -nan
 
-simple-array = [ "one", 'two', 'three' ]
-complex-array = [
-  # Before
-  "one", # First
-  # Second
-  'two',
-  'three'# Third
-  # More
-]
+simple-array = [ 'true' , "false"  ]
+# simple-table = {version = "2.0.0", nested-table = { sub = 1},  optional = true }
