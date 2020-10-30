@@ -219,7 +219,7 @@ protected int|float render_number() {
     return (int)value;
   }
 
-  if (is_modifier(M_FLOAT)) {
+  if (is_modifier(M_FLOAT & M_EXP)) {
     return (float)value;
   }
 
@@ -237,10 +237,6 @@ protected int|float render_number() {
     string tmp = replace(replace(value, "O", "o"), "o", "");
     sscanf(tmp, "%D", int v);
     return v;
-  }
-
-  if (is_modifier(M_EXP)) {
-    return (float)value;
   }
 
   error("Unhandled number type %O\n", modifer_to_string());
