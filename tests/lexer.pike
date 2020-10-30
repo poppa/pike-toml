@@ -9,10 +9,14 @@ int main() {
   TOML.Lexer lexer = TOML.Lexer(DATA);
   array(TOML.Token) toks = ({});
 
+  START_TIMER();
+
   while (TOML.Token tok = lexer->lex()) {
     werror("::::::::: %O\n", tok);
     toks += ({ tok });
   }
+
+  werror("\nTook: %O\n", GET_TIME());
 
   // werror("All tokens: %O\n", toks);
 }
