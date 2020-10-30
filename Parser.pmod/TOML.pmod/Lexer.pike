@@ -151,12 +151,12 @@ protected .Token lex_value() {
     case 0x22: {
       if (peek(2) == "\"\"") {
         string value = read_multiline_quoted_string();
-        return .Token(.Token.K_VALUE, value, "mul-quoted-string");
+        return value_token(value, .Token.M_QUOTED_STR | .Token.M_MULTILINE);
       }
 
       string value = read_quoted_string();
 
-      return .Token(.Token.K_VALUE, value, "quoted-string");
+      return value_token(value, .Token.M_QUOTED_STR);
     } break;
 
     //
@@ -164,11 +164,11 @@ protected .Token lex_value() {
     case 0x27: {
       if (peek(2) == "''") {
         string value = read_multiline_literal_string();
-        return .Token(.Token.K_VALUE, value, "mul-literal-string");
+        return value_token(value, .Token.M_LITERAL_STR | .Token.M_MULTILINE);
       }
 
       string value = read_litteral_string();
-      return .Token(.Token.K_VALUE, value, "literal-string");
+      return value_token(value, .Token.M_LITERAL_STR);
     } break;
 
     //
@@ -220,31 +220,31 @@ protected .Token lex_literal_value() {
   }
 
   if (data == "false" || data == "true") {
-    return .Token(.Token.K_VALUE, data, "bool");
+    return value_token(data, .Token.M_BOOLEAN);
   } else if (re_int->match(data)) {
-    return .Token(.Token.K_VALUE, data, "int");
+    return value_token(data, .Token.M_NUMBER | .Token.M_INT);
   } else if (re_float->match(data)) {
-    return .Token(.Token.K_VALUE, data, "float");
+    return value_token(data, .Token.M_NUMBER | .Token.M_FLOAT);
   } else if (re_exp->match(data)) {
-    return .Token(.Token.K_VALUE, data, "exp");
+    return value_token(data, .Token.M_NUMBER | .Token.M_EXP);
   } else if (re_hex->match(data)) {
-    return .Token(.Token.K_VALUE, data, "hex");
+    return value_token(data, .Token.M_NUMBER | .Token.M_HEX);
   } else if (re_oct->match(data)) {
-    return .Token(.Token.K_VALUE, data, "oct");
+    return value_token(data, .Token.M_NUMBER | .Token.M_OCT);
   } else if (re_bin->match(data)) {
-    return .Token(.Token.K_VALUE, data, "bin");
+    return value_token(data, .Token.M_NUMBER | .Token.M_BIN);
   } else if (re_inf->match(data)) {
-    return .Token(.Token.K_VALUE, data, "inf");
+    return value_token(data, .Token.M_NUMBER | .Token.M_INF);
   } else if (re_nan->match(data)) {
-    return .Token(.Token.K_VALUE, data, "nan");
+    return value_token(data, .Token.M_NUMBER | .Token.M_NAN);
   } else if (re_local_time->match(data)) {
-    return .Token(.Token.K_VALUE, data, "local-time");
+    return value_token(data, .Token.M_DATE | .Token.M_TIME);
   } else if (re_full_date->match(data)) {
-    return .Token(.Token.K_VALUE, data, "full-date");
+    return value_token(data, .Token.M_DATE);
   } else if (re_local_date_time->match(data)) {
-    return .Token(.Token.K_VALUE, data, "local-date-time");
+    return value_token(data, .Token.M_DATE);
   } else if (re_offset_date_time->match(data)) {
-    return .Token(.Token.K_VALUE, data, "offset-date-time");
+    return value_token(data, .Token.M_DATE);
   }
 
   error("Unhandled value: %O\n", data);
@@ -281,12 +281,12 @@ protected void lex_std_key() {
   token_queue->put(key);
 
   if (current == ".") {
-    key->modifier = "dotted";
+    key->modifier = .Token.M_DOTTED;
 
     while (current == ".") {
       advance();
       .Token lt = lex_key_low();
-      lt->modifier = "dotted";
+      lt->modifier = key->modifier;
       token_queue->put(lt);
     }
   }
@@ -295,19 +295,19 @@ protected void lex_std_key() {
 }
 
 protected .Token lex_key_low() {
-  string modifier;
+  .Token.Modifier modifier;
   string value;
 
   eat_whitespace();
 
   switch (current[0]) {
     case '"':
-      modifier = "quoted";
+      modifier = .Token.M_QUOTED_STR;
       value = read_quoted_string();
       break;
 
     case '\'':
-      modifier = "literal";
+      modifier = .Token.M_LITERAL_STR;
       value = read_litteral_string();
       break;
 
@@ -602,4 +602,11 @@ protected string peek(int(0..) | void n) {
   input->seek(pos, Stdio.SEEK_SET);
 
   return v;
+}
+
+protected inline .Token value_token(
+  string value,
+  .Token.Modifier | void modifier
+) {
+  return .Token(.Token.K_VALUE, value, modifier);
 }
