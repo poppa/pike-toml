@@ -41,7 +41,7 @@
 # #   A multiline with literal's
 # #   '''
 
-
+root-str = "I am Root"
 
 [key.sub]
 float = 1.23

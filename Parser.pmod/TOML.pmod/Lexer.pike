@@ -10,6 +10,7 @@ protected int(0..) line = 1;
 protected int(0..) column = 1;
 protected string current;
 protected ADT.Queue token_queue = ADT.Queue();
+protected ADT.Queue peek_queue = ADT.Queue();
 
 protected enum LexState {
   STATE_NONE,
@@ -49,8 +50,6 @@ protected string advance() {
 
   return UNDEFINED;
 }
-
-protected ADT.Queue peek_queue = ADT.Queue();
 
 public .Token peek_token() {
   .Token t = lex();
@@ -618,7 +617,7 @@ protected string peek(int(0..) | void n) {
 
 protected inline .Token value_token(
   string value,
-  .Token.Modifier | void modifier
+  .Token.Modifier|void modifier
 ) {
   return .Token(.Token.K_VALUE, value, modifier);
 }
