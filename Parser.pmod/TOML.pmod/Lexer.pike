@@ -98,6 +98,11 @@ public mixed lex() {
     // Std table / array
     case "[": {
       if (IS_STATE_KEY()) {
+        if (peek() == "[") {
+          TRACE(">> std array");
+          return lex_std_array();
+        }
+
         TRACE(">> std table\n");
         return lex_std_table();
       } else if (IS_STATE_VALUE()) {
@@ -249,11 +254,33 @@ protected .Token lex_literal_value() {
   error("Unhandled value: %O\n", data);
 }
 
-protected .Token lex_std_table() {
+protected .Token lex_std_array() {
+  expect("[");
   expect("[");
 
-  .Token tok_open = .Token(.Token.K_STD_TABLE_OPEN, "[");
+  .Token tok_open = .Token(.Token.K_STD_ARRAY_OPEN, "[[");
+  lex_std_key();
+  expect("]");
+  expect("]", true);
 
+  token_queue->put(.Token(.Token.K_STD_ARRAY_CLOSE, "]]"));
+
+  return tok_open;
+}
+
+protected .Token lex_std_table() {
+  expect("[");
+  .Token tok_open = .Token(.Token.K_STD_TABLE_OPEN, "[");
+  lex_std_key();
+  expect("]", false);
+
+  token_queue->put(.Token(.Token.K_STD_TABLE_CLOSE, "]"));
+
+  return tok_open;
+}
+
+protected void lex_std_key() {
+  eat_whitespace();
   .Token key = lex_key_low();
   token_queue->put(key);
 
@@ -268,16 +295,14 @@ protected .Token lex_std_table() {
     }
   }
 
-  expect("]", false);
-
-  token_queue->put(.Token(.Token.K_STD_TABLE_CLOSE, "]"));
-
-  return tok_open;
+  eat_whitespace();
 }
 
 protected .Token lex_key_low() {
   string modifier;
   string value;
+
+  eat_whitespace();
 
   switch (current[0]) {
     case '"':
@@ -297,6 +322,8 @@ protected .Token lex_key_low() {
     default:
       error("Unexpected character %O\n", current);
   }
+
+  eat_whitespace();
 
   return .Token(.Token.K_KEY, value, modifier);
 }
@@ -517,4 +544,11 @@ protected string read_until(multiset(string) chars) {
   }
 
   return buf;
+}
+
+protected string peek() {
+  int pos = input->tell();
+  string v = input->read(1);
+  input->seek(pos, Stdio.SEEK_SET);
+  return v;
 }

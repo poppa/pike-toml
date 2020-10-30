@@ -1,5 +1,7 @@
 # Yup
-# [table-key.dotted]
+[ table-key ]
+[ table-key.dotted ]
+
 # my-false_identifier = false
 # "my true identifer" = true
 # intval = 123
@@ -19,5 +21,7 @@
 # neginf = -inf
 # negnan = -nan
 
-simple-array = [ 'true' , "false"  ]
+# simple-array = [ 'true' , "false"  ]
 # simple-table = {version = "2.0.0", nested-table = { sub = 1},  optional = true }
+[[ std ]]
+[[ std . array ]]
