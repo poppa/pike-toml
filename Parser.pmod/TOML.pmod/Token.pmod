@@ -5,28 +5,28 @@ public enum Kind {
   K_NONE,
   K_KEY,
   K_VALUE,
-  K_STD_TABLE_OPEN,
-  K_STD_TABLE_CLOSE,
-  K_ARRAY_OPEN,
-  K_ARRAY_CLOSE,
-  K_INLINE_TBL_OPEN,
-  K_INLINE_TBL_CLOSE,
-  K_STD_ARRAY_OPEN,
-  K_STD_ARRAY_CLOSE,
+  K_TABLE_OPEN,
+  K_TABLE_CLOSE,
+  K_INLINE_TABLE_OPEN,
+  K_INLINE_TABLE_CLOSE,
+  K_INLINE_ARRAY_OPEN,
+  K_INLINE_ARRAY_CLOSE,
+  K_TABLE_ARRAY_OPEN,
+  K_TABLE_ARRAY_CLOSE,
 }
 
 public mapping(int:string) kind_map = ([
   K_NONE : "none",
   K_KEY : "key",
   K_VALUE : "value",
-  K_STD_TABLE_OPEN : "std-table-open",
-  K_STD_TABLE_CLOSE : "std-table-close",
-  K_ARRAY_OPEN: "array-open",
-  K_ARRAY_CLOSE: "array-close",
-  K_INLINE_TBL_OPEN: "inline-table-open",
-  K_INLINE_TBL_CLOSE: "inline-table-close",
-  K_STD_ARRAY_OPEN: "std-array-open",
-  K_STD_ARRAY_CLOSE: "std-array-close",
+  K_TABLE_OPEN : "table-open",
+  K_TABLE_CLOSE : "table-close",
+  K_INLINE_TABLE_OPEN: "inline-table-open",
+  K_INLINE_TABLE_CLOSE: "inline-table-close",
+  K_INLINE_ARRAY_OPEN: "inline-array-open",
+  K_INLINE_ARRAY_CLOSE: "inline-array-close",
+  K_TABLE_ARRAY_OPEN: "table-array-open",
+  K_TABLE_ARRAY_CLOSE: "table-array-close",
 ]);
 
 public enum Modifier {
@@ -168,35 +168,35 @@ class Token {
   }
 
   public bool is_standard_table_open() {
-    return is_kind(K_STD_TABLE_OPEN);
+    return is_kind(K_TABLE_OPEN);
   }
 
   public bool is_standard_table_close() {
-    return is_kind(K_STD_TABLE_CLOSE);
+    return is_kind(K_TABLE_CLOSE);
   }
 
   public bool is_array_open() {
-    return is_kind(K_ARRAY_OPEN);
+    return is_kind(K_INLINE_ARRAY_OPEN);
   }
 
   public bool is_array_close() {
-    return is_kind(K_ARRAY_CLOSE);
+    return is_kind(K_INLINE_ARRAY_CLOSE);
   }
 
   public bool is_inline_table_open() {
-    return is_kind(K_INLINE_TBL_OPEN);
+    return is_kind(K_INLINE_TABLE_OPEN);
   }
 
   public bool is_inline_table_close() {
-    return is_kind(K_INLINE_TBL_CLOSE);
+    return is_kind(K_INLINE_TABLE_CLOSE);
   }
 
   public bool is_standard_array_open() {
-    return is_kind(K_STD_TABLE_OPEN);
+    return is_kind(K_TABLE_OPEN);
   }
 
   public bool is_standard_array_close() {
-    return is_kind(K_STD_ARRAY_CLOSE);
+    return is_kind(K_TABLE_ARRAY_CLOSE);
   }
 
   public bool is_kind(Kind kind) {

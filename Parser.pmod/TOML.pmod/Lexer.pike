@@ -141,13 +141,13 @@ public mixed lex() {
     case "}": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(.Token.K_INLINE_TBL_CLOSE, "}");
+      return Token(.Token.K_INLINE_TABLE_CLOSE, "}");
     } break;
 
     case "]": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(.Token.K_ARRAY_CLOSE, "]");
+      return Token(.Token.K_INLINE_ARRAY_CLOSE, "]");
     } break;
 
     case ",": {
@@ -269,7 +269,7 @@ protected Token lex_value() {
 protected Token lex_inline_table() {
   expect("{", true);
 
-  Token tok_ret = Token(.Token.K_INLINE_TBL_OPEN, "{");
+  Token tok_ret = Token(.Token.K_INLINE_TABLE_OPEN, "{");
   SET_STATE_KEY();
   ctx_stack->push(CTX_TABLE);
 
@@ -283,7 +283,7 @@ protected Token lex_inline_table() {
 protected Token lex_array_value() {
   expect("[", true);
 
-  Token ret = Token(.Token.K_ARRAY_OPEN, "[");
+  Token ret = Token(.Token.K_INLINE_ARRAY_OPEN, "[");
   SET_STATE_VALUE();
   ctx_stack->push(CTX_ARRAY);
 
@@ -333,23 +333,23 @@ protected Token lex_std_array() {
   expect("[");
   expect("[");
 
-  Token tok_open = Token(.Token.K_STD_ARRAY_OPEN, "[[");
+  Token tok_open = Token(.Token.K_TABLE_ARRAY_OPEN, "[[");
   lex_std_key();
   expect("]");
   expect("]", true);
 
-  token_queue->put(Token(.Token.K_STD_ARRAY_CLOSE, "]]"));
+  token_queue->put(Token(.Token.K_TABLE_ARRAY_CLOSE, "]]"));
 
   return tok_open;
 }
 
 protected Token lex_std_table() {
   expect("[");
-  Token tok_open = Token(.Token.K_STD_TABLE_OPEN, "[");
+  Token tok_open = Token(.Token.K_TABLE_OPEN, "[");
   lex_std_key();
   expect("]", false);
 
-  token_queue->put(Token(.Token.K_STD_TABLE_CLOSE, "]"));
+  token_queue->put(Token(.Token.K_TABLE_CLOSE, "]"));
 
   return tok_open;
 }
