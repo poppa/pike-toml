@@ -78,7 +78,7 @@ protected mapping mkmapping(mapping old, TokenArray keys) {
 protected TokenArray read_keys(Lexer lexer) {
   TokenArray out = ({});
 
-  while (.Token t = lexer->lex()) {
+  while (Token t = lexer->lex()) {
     out += ({ t });
 
     if (!lexer->peek_token()->is_key()) {
