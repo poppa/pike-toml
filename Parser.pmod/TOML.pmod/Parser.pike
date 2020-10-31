@@ -1,8 +1,6 @@
 #charset utf-8
 #pike __REAL_VERSION__
 
-private mapping v = ([]);
-
 protected constant Lexer = .Lexer;
 protected constant Token = .Token.Token;
 protected typedef array(Token) TokenArray;
