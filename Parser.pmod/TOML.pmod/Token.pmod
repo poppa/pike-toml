@@ -239,7 +239,7 @@ class Token {
       return (int)value;
     }
 
-    if (is_modifier(M_FLOAT & M_EXP)) {
+    if (is_modifier(M_FLOAT) || is_modifier(M_EXP)) {
       return (float)value;
     }
 

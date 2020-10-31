@@ -47,6 +47,7 @@ root-flt = 1.2e-3
 [key.sub]
 float = 1.23
 str = 'ney'
+hex = 0xFF
 
 [key]
 int = 12
