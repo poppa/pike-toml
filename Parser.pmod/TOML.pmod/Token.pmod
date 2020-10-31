@@ -3,53 +3,53 @@
 
 class Kind {
   public enum Kind {
-    K_NONE,
-    K_KEY,
-    K_VALUE,
-    K_TABLE_OPEN,
-    K_TABLE_CLOSE,
-    K_INLINE_TABLE_OPEN,
-    K_INLINE_TABLE_CLOSE,
-    K_INLINE_ARRAY_OPEN,
-    K_INLINE_ARRAY_CLOSE,
-    K_TABLE_ARRAY_OPEN,
-    K_TABLE_ARRAY_CLOSE,
+    None,
+    Key,
+    Value,
+    TableOpen,
+    TableClose,
+    InlineTableOpen,
+    InlineTableClose,
+    InlineArrayOpen,
+    InlineArrayClose,
+    TableArrayOpen,
+    TableArrayClose,
   }
 }
 
 public mapping(int:string) kind_map = ([
-  Kind.K_NONE : "none",
-  Kind.K_KEY : "key",
-  Kind.K_VALUE : "value",
-  Kind.K_TABLE_OPEN : "table-open",
-  Kind.K_TABLE_CLOSE : "table-close",
-  Kind.K_INLINE_TABLE_OPEN: "inline-table-open",
-  Kind.K_INLINE_TABLE_CLOSE: "inline-table-close",
-  Kind.K_INLINE_ARRAY_OPEN: "inline-array-open",
-  Kind.K_INLINE_ARRAY_CLOSE: "inline-array-close",
-  Kind.K_TABLE_ARRAY_OPEN: "table-array-open",
-  Kind.K_TABLE_ARRAY_CLOSE: "table-array-close",
+  Kind.None : "none",
+  Kind.Key : "key",
+  Kind.Value : "value",
+  Kind.TableOpen : "table-open",
+  Kind.TableClose : "table-close",
+  Kind.InlineTableOpen: "inline-table-open",
+  Kind.InlineTableClose: "inline-table-close",
+  Kind.InlineArrayOpen: "inline-array-open",
+  Kind.InlineArrayClose: "inline-array-close",
+  Kind.TableArrayOpen: "table-array-open",
+  Kind.TableArrayClose: "table-array-close",
 ]);
 
 class Modifier {
   public enum Modifier {
-    M_NONE = 0,
-    M_QUOTED_STR  = 1 << 0,
-    M_LITERAL_STR = 1 << 1,
-    M_MULTILINE   = 1 << 2,
-    M_NUMBER      = 1 << 3,
-    M_BOOLEAN     = 1 << 4,
-    M_DATE        = 1 << 5,
-    M_INT         = 1 << 6,
-    M_FLOAT       = 1 << 7,
-    M_EXP         = 1 << 8,
-    M_HEX         = 1 << 9,
-    M_OCT         = 1 << 10,
-    M_BIN         = 1 << 11,
-    M_INF         = 1 << 12,
-    M_NAN         = 1 << 13,
-    M_TIME        = 1 << 14,
-    M_DOTTED      = 1 << 15,
+    None = 0,
+    QuotedString  = 1 << 0,
+    LiteralString = 1 << 1,
+    Multiline   = 1 << 2,
+    Number      = 1 << 3,
+    Boolean     = 1 << 4,
+    Date        = 1 << 5,
+    Int         = 1 << 6,
+    Float       = 1 << 7,
+    Exp         = 1 << 8,
+    Hex         = 1 << 9,
+    Oct         = 1 << 10,
+    Bin         = 1 << 11,
+    Inf         = 1 << 12,
+    Nan         = 1 << 13,
+    Time        = 1 << 14,
+    Dotted      = 1 << 15,
   }
 }
 
@@ -68,67 +68,67 @@ public string kind_to_string(Kind.Kind kind) {
 protected string modifier_to_string(Modifier.Modifier modifier) {
   array(string) s = ({});
 
-  if ((modifier & Modifier.M_QUOTED_STR) == Modifier.M_QUOTED_STR) {
+  if ((modifier & Modifier.QuotedString) == Modifier.QuotedString) {
     s += ({ "quoted-string" });
   }
 
-  if ((modifier & Modifier.M_LITERAL_STR) == Modifier.M_LITERAL_STR) {
+  if ((modifier & Modifier.LiteralString) == Modifier.LiteralString) {
     s += ({ "literal-string" });
   }
 
-  if ((modifier & Modifier.M_MULTILINE) == Modifier.M_MULTILINE) {
+  if ((modifier & Modifier.Multiline) == Modifier.Multiline) {
     s += ({ "multiline" });
   }
 
-  if ((modifier & Modifier.M_NUMBER) == Modifier.M_NUMBER) {
+  if ((modifier & Modifier.Number) == Modifier.Number) {
     s += ({ "number" });
   }
 
-  if ((modifier & Modifier.M_BOOLEAN) == Modifier.M_BOOLEAN) {
+  if ((modifier & Modifier.Boolean) == Modifier.Boolean) {
     s += ({ "boolean" });
   }
 
-  if ((modifier & Modifier.M_DATE) == Modifier.M_DATE) {
+  if ((modifier & Modifier.Date) == Modifier.Date) {
     s += ({ "date" });
   }
 
-  if ((modifier & Modifier.M_INT) == Modifier.M_INT) {
+  if ((modifier & Modifier.Int) == Modifier.Int) {
     s += ({ "int" });
   }
 
-  if ((modifier & Modifier.M_FLOAT) == Modifier.M_FLOAT) {
+  if ((modifier & Modifier.Float) == Modifier.Float) {
     s += ({ "float" });
   }
 
-  if ((modifier & Modifier.M_EXP) == Modifier.M_EXP) {
+  if ((modifier & Modifier.Exp) == Modifier.Exp) {
     s += ({ "exp" });
   }
 
-  if ((modifier & Modifier.M_HEX) == Modifier.M_HEX) {
+  if ((modifier & Modifier.Hex) == Modifier.Hex) {
     s += ({ "hex" });
   }
 
-  if ((modifier & Modifier.M_OCT) == Modifier.M_OCT) {
+  if ((modifier & Modifier.Oct) == Modifier.Oct) {
     s += ({ "oct" });
   }
 
-  if ((modifier & Modifier.M_BIN) == Modifier.M_BIN) {
+  if ((modifier & Modifier.Bin) == Modifier.Bin) {
     s += ({ "bin" });
   }
 
-  if ((modifier & Modifier.M_INF) == Modifier.M_INF) {
+  if ((modifier & Modifier.Inf) == Modifier.Inf) {
     s += ({ "inf" });
   }
 
-  if ((modifier & Modifier.M_NAN) == Modifier.M_NAN) {
+  if ((modifier & Modifier.Nan) == Modifier.Nan) {
     s += ({ "nan" });
   }
 
-  if ((modifier & Modifier.M_TIME) == Modifier.M_TIME) {
+  if ((modifier & Modifier.Time) == Modifier.Time) {
     s += ({ "time" });
   }
 
-  if ((modifier & Modifier.M_DOTTED) == Modifier.M_DOTTED) {
+  if ((modifier & Modifier.Dotted) == Modifier.Dotted) {
     s += ({ "dotted" });
   }
 
@@ -158,11 +158,11 @@ class Token {
   }
 
   public bool is_key() {
-    return is_kind(Kind.K_KEY);
+    return is_kind(Kind.Key);
   }
 
   public bool is_value(Modifier.Modifier|void modifier) {
-    bool is = is_kind(Kind.K_VALUE);
+    bool is = is_kind(Kind.Value);
 
     if (is && modifier) {
       return is_modifier(modifier);
@@ -172,35 +172,35 @@ class Token {
   }
 
   public bool is_standard_table_open() {
-    return is_kind(Kind.K_TABLE_OPEN);
+    return is_kind(Kind.TableOpen);
   }
 
   public bool is_standard_table_close() {
-    return is_kind(Kind.K_TABLE_CLOSE);
+    return is_kind(Kind.TableClose);
   }
 
   public bool is_array_open() {
-    return is_kind(Kind.K_INLINE_ARRAY_OPEN);
+    return is_kind(Kind.InlineArrayOpen);
   }
 
   public bool is_array_close() {
-    return is_kind(Kind.K_INLINE_ARRAY_CLOSE);
+    return is_kind(Kind.InlineArrayClose);
   }
 
   public bool is_inline_table_open() {
-    return is_kind(Kind.K_INLINE_TABLE_OPEN);
+    return is_kind(Kind.InlineTableOpen);
   }
 
   public bool is_inline_table_close() {
-    return is_kind(Kind.K_INLINE_TABLE_CLOSE);
+    return is_kind(Kind.InlineTableClose);
   }
 
   public bool is_standard_array_open() {
-    return is_kind(Kind.K_TABLE_OPEN);
+    return is_kind(Kind.TableOpen);
   }
 
   public bool is_standard_array_close() {
-    return is_kind(Kind.K_TABLE_ARRAY_CLOSE);
+    return is_kind(Kind.TableArrayClose);
   }
 
   public bool is_kind(Kind.Kind kind) {
@@ -230,11 +230,11 @@ class Token {
       return value;
     }
 
-    if (is_modifier(Modifier.M_NUMBER)) {
+    if (is_modifier(Modifier.Number)) {
       return render_number();
-    } else if (is_modifier(Modifier.M_DATE)) {
+    } else if (is_modifier(Modifier.Date)) {
       return render_date();
-    } else if (is_modifier(Modifier.M_BOOLEAN)) {
+    } else if (is_modifier(Modifier.Boolean)) {
       return value == "true";
     } else {
       return value;
@@ -242,25 +242,25 @@ class Token {
   }
 
   protected int|float render_number() {
-    if (is_modifier(Modifier.M_INT)) {
+    if (is_modifier(Modifier.Int)) {
       return (int)value;
     }
 
-    if (is_modifier(Modifier.M_FLOAT) || is_modifier(Modifier.M_EXP)) {
+    if (is_modifier(Modifier.Float) || is_modifier(Modifier.Exp)) {
       return (float)value;
     }
 
-    if (is_modifier(Modifier.M_HEX)) {
+    if (is_modifier(Modifier.Hex)) {
       sscanf(value, "%D", int v);
       return v;
     }
 
-    if (is_modifier(Modifier.M_BIN)) {
+    if (is_modifier(Modifier.Bin)) {
       sscanf(value, "%D", int v);
       return v;
     }
 
-    if (is_modifier(Modifier.M_OCT)) {
+    if (is_modifier(Modifier.Oct)) {
       string tmp = replace(replace(value, "O", "o"), "o", "");
       sscanf(tmp, "%D", int v);
       return v;
@@ -270,7 +270,7 @@ class Token {
   }
 
   protected object(Calendar.Time)|object(Calendar.ISO) render_date() {
-    if (is_modifier(Modifier.M_TIME)) {
+    if (is_modifier(Modifier.Time)) {
       return Calendar.dwim_time(value);
     } else {
       return Calendar.dwim_day(value);

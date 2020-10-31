@@ -29,7 +29,7 @@ public mixed parse(Lexer lexer) {
     switch (tok->kind) {
       //
       // Handle key
-      case .Token.K_KEY: {
+      case .Token.Key: {
         Token val = lexer->lex();
         expect_value(val);
         p[tok->value] = val->pike_value();
@@ -37,9 +37,9 @@ public mixed parse(Lexer lexer) {
 
       //
       // Handle std table
-      case .Token.K_TABLE_OPEN: {
+      case .Token.TableOpen: {
         TokenArray keys = read_keys(lexer);
-        expect_kind(lexer->lex(), .Token.K_TABLE_CLOSE);
+        expect_kind(lexer->lex(), .Token.TableClose);
 
         p = mkmapping(top, keys);
 

@@ -143,13 +143,13 @@ public mixed lex() {
     case "}": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(Kind.K_INLINE_TABLE_CLOSE, "}");
+      return Token(Kind.InlineTableClose, "}");
     } break;
 
     case "]": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(Kind.K_INLINE_ARRAY_CLOSE, "]");
+      return Token(Kind.InlineArrayClose, "]");
     } break;
 
     case ",": {
@@ -232,12 +232,12 @@ protected Token lex_value() {
     case 0x22: {
       if (peek(2) == "\"\"") {
         string value = read_multiline_quoted_string();
-        return value_token(value, Modifier.M_QUOTED_STR | Modifier.M_MULTILINE);
+        return value_token(value, Modifier.QuotedString | Modifier.Multiline);
       }
 
       string value = read_quoted_string();
 
-      return value_token(value, Modifier.M_QUOTED_STR);
+      return value_token(value, Modifier.QuotedString);
     } break;
 
     //
@@ -245,11 +245,11 @@ protected Token lex_value() {
     case 0x27: {
       if (peek(2) == "''") {
         string value = read_multiline_literal_string();
-        return value_token(value, Modifier.M_LITERAL_STR | Modifier.M_MULTILINE);
+        return value_token(value, Modifier.LiteralString | Modifier.Multiline);
       }
 
       string value = read_litteral_string();
-      return value_token(value, Modifier.M_LITERAL_STR);
+      return value_token(value, Modifier.LiteralString);
     } break;
 
     //
@@ -271,7 +271,7 @@ protected Token lex_value() {
 protected Token lex_inline_table() {
   expect("{", true);
 
-  Token tok_ret = Token(Kind.K_INLINE_TABLE_OPEN, "{");
+  Token tok_ret = Token(Kind.InlineTableOpen, "{");
   SET_STATE_KEY();
   ctx_stack->push(CTX_TABLE);
 
@@ -285,7 +285,7 @@ protected Token lex_inline_table() {
 protected Token lex_array_value() {
   expect("[", true);
 
-  Token ret = Token(Kind.K_INLINE_ARRAY_OPEN, "[");
+  Token ret = Token(Kind.InlineArrayOpen, "[");
   SET_STATE_VALUE();
   ctx_stack->push(CTX_ARRAY);
 
@@ -301,31 +301,31 @@ protected Token lex_literal_value() {
   }
 
   if (data == "false" || data == "true") {
-    return value_token(data, Modifier.M_BOOLEAN);
+    return value_token(data, Modifier.Boolean);
   } else if (re_int->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_INT);
+    return value_token(data, Modifier.Number | Modifier.Int);
   } else if (re_float->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_FLOAT);
+    return value_token(data, Modifier.Number | Modifier.Float);
   } else if (re_exp->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_EXP);
+    return value_token(data, Modifier.Number | Modifier.Exp);
   } else if (re_hex->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_HEX);
+    return value_token(data, Modifier.Number | Modifier.Hex);
   } else if (re_oct->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_OCT);
+    return value_token(data, Modifier.Number | Modifier.Oct);
   } else if (re_bin->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_BIN);
+    return value_token(data, Modifier.Number | Modifier.Bin);
   } else if (re_inf->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_INF);
+    return value_token(data, Modifier.Number | Modifier.Inf);
   } else if (re_nan->match(data)) {
-    return value_token(data, Modifier.M_NUMBER | Modifier.M_NAN);
+    return value_token(data, Modifier.Number | Modifier.Nan);
   } else if (re_local_time->match(data)) {
-    return value_token(data, Modifier.M_DATE | Modifier.M_TIME);
+    return value_token(data, Modifier.Date | Modifier.Time);
   } else if (re_full_date->match(data)) {
-    return value_token(data, Modifier.M_DATE);
+    return value_token(data, Modifier.Date);
   } else if (re_local_date_time->match(data)) {
-    return value_token(data, Modifier.M_DATE | Modifier.M_TIME);
+    return value_token(data, Modifier.Date | Modifier.Time);
   } else if (re_offset_date_time->match(data)) {
-    return value_token(data, Modifier.M_DATE | Modifier.M_TIME);
+    return value_token(data, Modifier.Date | Modifier.Time);
   }
 
   error("Unhandled value: %O\n", data);
@@ -335,23 +335,23 @@ protected Token lex_std_array() {
   expect("[");
   expect("[");
 
-  Token tok_open = Token(Kind.K_TABLE_ARRAY_OPEN, "[[");
+  Token tok_open = Token(Kind.TableArrayOpen, "[[");
   lex_std_key();
   expect("]");
   expect("]", true);
 
-  token_queue->put(Token(Kind.K_TABLE_ARRAY_CLOSE, "]]"));
+  token_queue->put(Token(Kind.TableArrayClose, "]]"));
 
   return tok_open;
 }
 
 protected Token lex_std_table() {
   expect("[");
-  Token tok_open = Token(Kind.K_TABLE_OPEN, "[");
+  Token tok_open = Token(Kind.TableOpen, "[");
   lex_std_key();
   expect("]", false);
 
-  token_queue->put(Token(Kind.K_TABLE_CLOSE, "]"));
+  token_queue->put(Token(Kind.TableClose, "]"));
 
   return tok_open;
 }
@@ -362,7 +362,7 @@ protected void lex_std_key() {
   token_queue->put(key);
 
   if (current == ".") {
-    key->modifier = Modifier.M_DOTTED;
+    key->modifier = Modifier.Dotted;
 
     while (current == ".") {
       advance();
@@ -383,12 +383,12 @@ protected Token lex_key_low() {
 
   switch (current[0]) {
     case '"':
-      modifier = Modifier.M_QUOTED_STR;
+      modifier = Modifier.QuotedString;
       value = read_quoted_string();
       break;
 
     case '\'':
-      modifier = Modifier.M_LITERAL_STR;
+      modifier = Modifier.LiteralString;
       value = read_litteral_string();
       break;
 
@@ -402,7 +402,7 @@ protected Token lex_key_low() {
 
   eat_whitespace();
 
-  return Token(Kind.K_KEY, value, modifier);
+  return Token(Kind.Key, value, modifier);
 }
 
 protected string read_unquoted_key() {
@@ -689,5 +689,5 @@ protected Token value_token(
   string value,
   Modifier.Modifier|void modifier
 ) {
-  return Token(Kind.K_VALUE, value, modifier);
+  return Token(Kind.Value, value, modifier);
 }
