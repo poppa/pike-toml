@@ -1,7 +1,7 @@
 private mapping v = ([]);
 
 protected constant Lexer = .Lexer;
-protected constant Token = .Token;
+protected constant Token = .Token.Token;
 protected typedef array(Token) TokenArray;
 
 public mixed parse_file(Stdio.File file) {
@@ -28,7 +28,7 @@ public mixed parse(Lexer lexer) {
     switch (tok->kind) {
       //
       // Handle key
-      case Token.K_KEY: {
+      case .Token.K_KEY: {
         Token val = lexer->lex();
         expect_value(val);
         p[tok->value] = val->pike_value();
@@ -36,9 +36,9 @@ public mixed parse(Lexer lexer) {
 
       //
       // Handle std table
-      case Token.K_STD_TABLE_OPEN: {
+      case .Token.K_STD_TABLE_OPEN: {
         TokenArray keys = read_keys(lexer);
-        expect_kind(lexer->lex(), Token.K_STD_TABLE_CLOSE);
+        expect_kind(lexer->lex(), .Token.K_STD_TABLE_CLOSE);
 
         p = mkmapping(top, keys);
 
@@ -95,7 +95,7 @@ protected void expect_value(Token t) {
   }
 }
 
-protected void expect_kind(Token t, Token.Kind kind) {
+protected void expect_kind(Token t, .Token.Kind kind) {
   if (!t->is_kind(kind)) {
     error("Expected kind %O, got %O\n", kind, t->kind);
   }

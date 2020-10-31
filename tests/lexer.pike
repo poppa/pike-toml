@@ -3,15 +3,15 @@
 
 #include "test.h"
 
-Stdio.File DATA = Stdio.File(combine_path(__DIR__, "simple1.toml"));
+Stdio.File DATA = Stdio.File(combine_path(__DIR__, "Cargo.toml"));
 
 int main() {
   TOML.Lexer lexer = TOML.Lexer(DATA);
-  array(TOML.Token) toks = ({});
+  array(TOML.Token.Token) toks = ({});
 
   START_TIMER();
 
-  while (TOML.Token tok = lexer->lex()) {
+  while (TOML.Token.Token tok = lexer->lex()) {
     werror("::::::::: %O\n", tok);
     toks += ({ tok });
   }

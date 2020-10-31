@@ -4,6 +4,8 @@
 
 #include "lexer.h"
 
+private constant Token = .Token.Token;
+
 protected Stdio.File input;
 protected int(0..) cursor = 0;
 protected int(0..) line = 1;
@@ -11,6 +13,7 @@ protected int(0..) column = 1;
 protected string current;
 protected ADT.Queue token_queue = ADT.Queue();
 protected ADT.Queue peek_queue = ADT.Queue();
+protected ADT.Stack ctx_stack = ADT.Stack();
 
 protected enum LexState {
   STATE_NONE,
@@ -26,8 +29,6 @@ protected enum Ctx {
   CTX_TABLE,
 }
 
-protected ADT.Stack ctx_stack = ADT.Stack();
-
 protected void create(Stdio.File | string input) {
   if (stringp(input)) {
     input = Stdio.FakeFile(input);
@@ -36,23 +37,8 @@ protected void create(Stdio.File | string input) {
   this::input = input;
 }
 
-protected string advance() {
-  current = input->read(1);
-
-  if (current != "") {
-    if (current == "\n") {
-      inc_line();
-    }
-
-    column += 1;
-    return current;
-  }
-
-  return UNDEFINED;
-}
-
-public .Token peek_token() {
-  .Token t = lex();
+public Token peek_token() {
+  Token t = lex();
   peek_queue->put(t);
   return t;
 }
@@ -88,13 +74,13 @@ public mixed lex() {
     case "}": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return .Token(.Token.K_INLINE_TBL_CLOSE, "}");
+      return Token(.Token.K_INLINE_TBL_CLOSE, "}");
     } break;
 
     case "]": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return .Token(.Token.K_ARRAY_CLOSE, "]");
+      return Token(.Token.K_ARRAY_CLOSE, "]");
     } break;
 
     case ",": {
@@ -110,7 +96,7 @@ public mixed lex() {
 
         return lex_std_table();
       } else if (IS_STATE_VALUE()) {
-        .Token tok = lex_value();
+        Token tok = lex_value();
         return tok;
       }
     }
@@ -118,10 +104,10 @@ public mixed lex() {
     // It must be a key/value
     default: {
       if (IS_STATE_KEY()) {
-        .Token tok = lex_key();
+        Token tok = lex_key();
         return tok;
       } else if (IS_STATE_VALUE()) {
-        .Token tok = lex_value();
+        Token tok = lex_value();
         push_back();
         SET_STATE_KEY();
         return tok;
@@ -132,8 +118,23 @@ public mixed lex() {
   error("Unexpected character %O\n", current);
 }
 
-protected .Token lex_key() {
-  .Token key = lex_key_low();
+protected string advance() {
+  current = input->read(1);
+
+  if (current != "") {
+    if (current == "\n") {
+      inc_line();
+    }
+
+    column += 1;
+    return current;
+  }
+
+  return UNDEFINED;
+}
+
+protected Token lex_key() {
+  Token key = lex_key_low();
   eat_whitespace();
   // FIXME: Same as in lex_inline_table()
   expect("=", true);
@@ -143,7 +144,7 @@ protected .Token lex_key() {
   return key;
 }
 
-protected .Token lex_value() {
+protected Token lex_value() {
   switch (current[0]) {
     //
     // [    Array start
@@ -198,10 +199,10 @@ protected .Token lex_value() {
   exit(1, "Lex value\n");
 }
 
-protected .Token lex_inline_table() {
+protected Token lex_inline_table() {
   expect("{", true);
 
-  .Token tok_ret = .Token(.Token.K_INLINE_TBL_OPEN, "{");
+  Token tok_ret = Token(.Token.K_INLINE_TBL_OPEN, "{");
   SET_STATE_KEY();
   ctx_stack->push(CTX_TABLE);
 
@@ -212,17 +213,17 @@ protected .Token lex_inline_table() {
   return tok_ret;
 }
 
-protected .Token lex_array_value() {
+protected Token lex_array_value() {
   expect("[", true);
 
-  .Token ret = .Token(.Token.K_ARRAY_OPEN, "[");
+  Token ret = Token(.Token.K_ARRAY_OPEN, "[");
   SET_STATE_VALUE();
   ctx_stack->push(CTX_ARRAY);
 
   return ret;
 }
 
-protected .Token lex_literal_value() {
+protected Token lex_literal_value() {
   // FIXME: Verfiy there are no more stop characters
   string data = read_until((< ",", "\n", " ", "\t", "\v", "#", "]", "}" >));
 
@@ -261,34 +262,34 @@ protected .Token lex_literal_value() {
   error("Unhandled value: %O\n", data);
 }
 
-protected .Token lex_std_array() {
+protected Token lex_std_array() {
   expect("[");
   expect("[");
 
-  .Token tok_open = .Token(.Token.K_STD_ARRAY_OPEN, "[[");
+  Token tok_open = Token(.Token.K_STD_ARRAY_OPEN, "[[");
   lex_std_key();
   expect("]");
   expect("]", true);
 
-  token_queue->put(.Token(.Token.K_STD_ARRAY_CLOSE, "]]"));
+  token_queue->put(Token(.Token.K_STD_ARRAY_CLOSE, "]]"));
 
   return tok_open;
 }
 
-protected .Token lex_std_table() {
+protected Token lex_std_table() {
   expect("[");
-  .Token tok_open = .Token(.Token.K_STD_TABLE_OPEN, "[");
+  Token tok_open = Token(.Token.K_STD_TABLE_OPEN, "[");
   lex_std_key();
   expect("]", false);
 
-  token_queue->put(.Token(.Token.K_STD_TABLE_CLOSE, "]"));
+  token_queue->put(Token(.Token.K_STD_TABLE_CLOSE, "]"));
 
   return tok_open;
 }
 
 protected void lex_std_key() {
   eat_whitespace();
-  .Token key = lex_key_low();
+  Token key = lex_key_low();
   token_queue->put(key);
 
   if (current == ".") {
@@ -296,7 +297,7 @@ protected void lex_std_key() {
 
     while (current == ".") {
       advance();
-      .Token lt = lex_key_low();
+      Token lt = lex_key_low();
       lt->modifier = key->modifier;
       token_queue->put(lt);
     }
@@ -305,7 +306,7 @@ protected void lex_std_key() {
   eat_whitespace();
 }
 
-protected .Token lex_key_low() {
+protected Token lex_key_low() {
   .Token.Modifier modifier;
   string value;
 
@@ -332,7 +333,7 @@ protected .Token lex_key_low() {
 
   eat_whitespace();
 
-  return .Token(.Token.K_KEY, value, modifier);
+  return Token(.Token.K_KEY, value, modifier);
 }
 
 protected string read_unquoted_key() {
@@ -615,9 +616,9 @@ protected string peek(int(0..) | void n) {
   return v;
 }
 
-protected inline .Token value_token(
+protected Token value_token(
   string value,
   .Token.Modifier|void modifier
 ) {
-  return .Token(.Token.K_VALUE, value, modifier);
+  return Token(.Token.K_VALUE, value, modifier);
 }
