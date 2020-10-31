@@ -35,6 +35,8 @@
   } while (0)
 
 private constant Token = .Token.Token;
+private constant Kind = .Token.Kind;
+private constant Modifier = .Token.Modifier;
 
 protected enum LexState {
   STATE_NONE,
@@ -141,13 +143,13 @@ public mixed lex() {
     case "}": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(.Token.K_INLINE_TABLE_CLOSE, "}");
+      return Token(Kind.K_INLINE_TABLE_CLOSE, "}");
     } break;
 
     case "]": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(.Token.K_INLINE_ARRAY_CLOSE, "]");
+      return Token(Kind.K_INLINE_ARRAY_CLOSE, "]");
     } break;
 
     case ",": {
@@ -230,12 +232,12 @@ protected Token lex_value() {
     case 0x22: {
       if (peek(2) == "\"\"") {
         string value = read_multiline_quoted_string();
-        return value_token(value, .Token.M_QUOTED_STR | .Token.M_MULTILINE);
+        return value_token(value, Modifier.M_QUOTED_STR | Modifier.M_MULTILINE);
       }
 
       string value = read_quoted_string();
 
-      return value_token(value, .Token.M_QUOTED_STR);
+      return value_token(value, Modifier.M_QUOTED_STR);
     } break;
 
     //
@@ -243,11 +245,11 @@ protected Token lex_value() {
     case 0x27: {
       if (peek(2) == "''") {
         string value = read_multiline_literal_string();
-        return value_token(value, .Token.M_LITERAL_STR | .Token.M_MULTILINE);
+        return value_token(value, Modifier.M_LITERAL_STR | Modifier.M_MULTILINE);
       }
 
       string value = read_litteral_string();
-      return value_token(value, .Token.M_LITERAL_STR);
+      return value_token(value, Modifier.M_LITERAL_STR);
     } break;
 
     //
@@ -269,7 +271,7 @@ protected Token lex_value() {
 protected Token lex_inline_table() {
   expect("{", true);
 
-  Token tok_ret = Token(.Token.K_INLINE_TABLE_OPEN, "{");
+  Token tok_ret = Token(Kind.K_INLINE_TABLE_OPEN, "{");
   SET_STATE_KEY();
   ctx_stack->push(CTX_TABLE);
 
@@ -283,7 +285,7 @@ protected Token lex_inline_table() {
 protected Token lex_array_value() {
   expect("[", true);
 
-  Token ret = Token(.Token.K_INLINE_ARRAY_OPEN, "[");
+  Token ret = Token(Kind.K_INLINE_ARRAY_OPEN, "[");
   SET_STATE_VALUE();
   ctx_stack->push(CTX_ARRAY);
 
@@ -299,31 +301,31 @@ protected Token lex_literal_value() {
   }
 
   if (data == "false" || data == "true") {
-    return value_token(data, .Token.M_BOOLEAN);
+    return value_token(data, Modifier.M_BOOLEAN);
   } else if (re_int->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_INT);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_INT);
   } else if (re_float->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_FLOAT);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_FLOAT);
   } else if (re_exp->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_EXP);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_EXP);
   } else if (re_hex->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_HEX);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_HEX);
   } else if (re_oct->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_OCT);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_OCT);
   } else if (re_bin->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_BIN);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_BIN);
   } else if (re_inf->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_INF);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_INF);
   } else if (re_nan->match(data)) {
-    return value_token(data, .Token.M_NUMBER | .Token.M_NAN);
+    return value_token(data, Modifier.M_NUMBER | Modifier.M_NAN);
   } else if (re_local_time->match(data)) {
-    return value_token(data, .Token.M_DATE | .Token.M_TIME);
+    return value_token(data, Modifier.M_DATE | Modifier.M_TIME);
   } else if (re_full_date->match(data)) {
-    return value_token(data, .Token.M_DATE);
+    return value_token(data, Modifier.M_DATE);
   } else if (re_local_date_time->match(data)) {
-    return value_token(data, .Token.M_DATE | .Token.M_TIME);
+    return value_token(data, Modifier.M_DATE | Modifier.M_TIME);
   } else if (re_offset_date_time->match(data)) {
-    return value_token(data, .Token.M_DATE | .Token.M_TIME);
+    return value_token(data, Modifier.M_DATE | Modifier.M_TIME);
   }
 
   error("Unhandled value: %O\n", data);
@@ -333,23 +335,23 @@ protected Token lex_std_array() {
   expect("[");
   expect("[");
 
-  Token tok_open = Token(.Token.K_TABLE_ARRAY_OPEN, "[[");
+  Token tok_open = Token(Kind.K_TABLE_ARRAY_OPEN, "[[");
   lex_std_key();
   expect("]");
   expect("]", true);
 
-  token_queue->put(Token(.Token.K_TABLE_ARRAY_CLOSE, "]]"));
+  token_queue->put(Token(Kind.K_TABLE_ARRAY_CLOSE, "]]"));
 
   return tok_open;
 }
 
 protected Token lex_std_table() {
   expect("[");
-  Token tok_open = Token(.Token.K_TABLE_OPEN, "[");
+  Token tok_open = Token(Kind.K_TABLE_OPEN, "[");
   lex_std_key();
   expect("]", false);
 
-  token_queue->put(Token(.Token.K_TABLE_CLOSE, "]"));
+  token_queue->put(Token(Kind.K_TABLE_CLOSE, "]"));
 
   return tok_open;
 }
@@ -360,7 +362,7 @@ protected void lex_std_key() {
   token_queue->put(key);
 
   if (current == ".") {
-    key->modifier = .Token.M_DOTTED;
+    key->modifier = Modifier.M_DOTTED;
 
     while (current == ".") {
       advance();
@@ -374,19 +376,19 @@ protected void lex_std_key() {
 }
 
 protected Token lex_key_low() {
-  .Token.Modifier modifier;
+  Modifier.Modifier modifier;
   string value;
 
   eat_whitespace();
 
   switch (current[0]) {
     case '"':
-      modifier = .Token.M_QUOTED_STR;
+      modifier = Modifier.M_QUOTED_STR;
       value = read_quoted_string();
       break;
 
     case '\'':
-      modifier = .Token.M_LITERAL_STR;
+      modifier = Modifier.M_LITERAL_STR;
       value = read_litteral_string();
       break;
 
@@ -400,7 +402,7 @@ protected Token lex_key_low() {
 
   eat_whitespace();
 
-  return Token(.Token.K_KEY, value, modifier);
+  return Token(Kind.K_KEY, value, modifier);
 }
 
 protected string read_unquoted_key() {
@@ -685,7 +687,7 @@ protected string peek(int(0..) | void n) {
 
 protected Token value_token(
   string value,
-  .Token.Modifier|void modifier
+  Modifier.Modifier|void modifier
 ) {
-  return Token(.Token.K_VALUE, value, modifier);
+  return Token(Kind.K_VALUE, value, modifier);
 }
