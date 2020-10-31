@@ -98,7 +98,7 @@ protected void expect_value(Token t) {
   }
 }
 
-protected void expect_kind(Token t, Kind.Kind kind) {
+protected void expect_kind(Token t, Kind.Type kind) {
   if (!t->is_kind(kind)) {
     error("Expected kind %O, got %O\n", kind, t->kind);
   }

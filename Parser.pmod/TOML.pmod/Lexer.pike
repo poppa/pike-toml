@@ -376,7 +376,7 @@ protected void lex_std_key() {
 }
 
 protected Token lex_key_low() {
-  Modifier.Modifier modifier;
+  Modifier.Type modifier;
   string value;
 
   eat_whitespace();
@@ -687,7 +687,7 @@ protected string peek(int(0..) | void n) {
 
 protected Token value_token(
   string value,
-  Modifier.Modifier|void modifier
+  Modifier.Type|void modifier
 ) {
   return Token(Kind.Value, value, modifier);
 }

@@ -2,7 +2,7 @@
 #pike __REAL_VERSION__
 
 class Kind {
-  public enum Kind {
+  public enum Type {
     None,
     Key,
     Value,
@@ -32,7 +32,7 @@ public mapping(int:string) kind_map = ([
 ]);
 
 class Modifier {
-  public enum Modifier {
+  public enum Type {
     None = 0,
     QuotedString  = 1 << 0,
     LiteralString = 1 << 1,
@@ -53,19 +53,19 @@ class Modifier {
   }
 }
 
-public Token new(Kind.Kind kind, string value) {
+public Token new(Kind.Type kind, string value) {
   return Token(kind, value);
 }
 
-public variant Token new(Kind.Kind kind, string value, Modifier.Modifier modifier) {
+public variant Token new(Kind.Type kind, string value, Modifier.Type modifier) {
   return Token(kind, value, modifier);
 }
 
-public string kind_to_string(Kind.Kind kind) {
+public string kind_to_string(Kind.Type kind) {
   return kind_map[kind];
 }
 
-protected string modifier_to_string(Modifier.Modifier modifier) {
+protected string modifier_to_string(Modifier.Type modifier) {
   array(string) s = ({});
 
   if ((modifier & Modifier.QuotedString) == Modifier.QuotedString) {
@@ -139,19 +139,19 @@ private function _kind_to_string = kind_to_string;
 private function _modifier_to_string = modifier_to_string;
 
 class Token {
-  public Kind.Kind kind;
+  public Kind.Type kind;
   public string value;
-  public Modifier.Modifier modifier;
+  public Modifier.Type modifier;
 
-  protected void create(Kind.Kind kind, string value) {
+  protected void create(Kind.Type kind, string value) {
     this::kind = kind;
     this::value = value;
   }
 
   protected variant void create(
-    Kind.Kind kind,
+    Kind.Type kind,
     string value,
-    Modifier.Modifier modifier
+    Modifier.Type modifier
   ) {
     this::create(kind, value);
     this::modifier = modifier;
@@ -161,7 +161,7 @@ class Token {
     return is_kind(Kind.Key);
   }
 
-  public bool is_value(Modifier.Modifier|void modifier) {
+  public bool is_value(Modifier.Type|void modifier) {
     bool is = is_kind(Kind.Value);
 
     if (is && modifier) {
@@ -203,11 +203,11 @@ class Token {
     return is_kind(Kind.TableArrayClose);
   }
 
-  public bool is_kind(Kind.Kind kind) {
+  public bool is_kind(Kind.Type kind) {
     return this::kind == kind;
   }
 
-  public bool is_modifier(Modifier.Modifier modifier) {
+  public bool is_modifier(Modifier.Type modifier) {
     return (this::modifier & modifier) == modifier;
   }
 
