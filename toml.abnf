@@ -1,10 +1,13 @@
-;; WARNING: This document is a work-in-progress and should not be considered
-;; authoritative until further notice.
+;; This document describes TOML's syntax, using the ABNF format (defined in
+;; RFC 5234 -- http://www.ietf.org/rfc/rfc5234.txt).
+;;
+;; All valid TOML documents will match this description, however certain
+;; invalid documents would need to be rejected as per the semantics described
+;; in the supporting text description.
 
-;; This is an attempt to define TOML in ABNF according to the grammar defined
-;; in RFC 5234 (http://www.ietf.org/rfc/rfc5234.txt).
-
-;; You can try out this grammar using http://instaparse.mojombo.com/
+;; It is possible to try this grammar interactively, using instaparse.
+;;     http://instaparse.mojombo.com/
+;;
 ;; To do so, in the lower right, click on Options and change `:input-format` to
 ;; ':abnf'. Then paste this entire ABNF document into the grammar entry box
 ;; (above the options). Then you can type or paste a sample TOML document into
@@ -32,8 +35,8 @@ newline =/ %x0D.0A  ; CRLF
 ;; Comment
 
 comment-start-symbol = %x23 ; #
-non-eol =  %x09
-non-eol =/ %x20-10FFFF
+non-ascii = %x80-D7FF / %xE000-10FFFF
+non-eol = %x09 / %x20-7F / non-ascii
 
 comment = comment-start-symbol *non-eol
 
@@ -64,13 +67,12 @@ basic-string = quotation-mark *basic-char quotation-mark
 quotation-mark = %x22            ; "
 
 basic-char = basic-unescaped / escaped
-basic-unescaped = %x20-21 / %x23-5B / %x5D-7E / %x80-10FFFF
+basic-unescaped = wschar / %x21 / %x23-5B / %x5D-7E / non-ascii
 escaped = escape escape-seq-char
 
 escape = %x5C                   ; \
 escape-seq-char =  %x22         ; "    quotation mark  U+0022
 escape-seq-char =/ %x5C         ; \    reverse solidus U+005C
-escape-seq-char =/ %x2F         ; /    solidus         U+002F
 escape-seq-char =/ %x62         ; b    backspace       U+0008
 escape-seq-char =/ %x66         ; f    form feed       U+000C
 escape-seq-char =/ %x6E         ; n    line feed       U+000A
@@ -82,12 +84,14 @@ escape-seq-char =/ %x55 8HEXDIG ; UXXXXXXXX            U+XXXXXXXX
 ;; Multiline Basic String
 
 ml-basic-string = ml-basic-string-delim ml-basic-body ml-basic-string-delim
-
 ml-basic-string-delim = 3quotation-mark
+ml-basic-body = *mlb-content *( mlb-quotes 1*mlb-content ) [ mlb-quotes ]
 
-ml-basic-body = *( ml-basic-char / newline / ( escape ws newline ) )
-ml-basic-char = ml-basic-unescaped / escaped
-ml-basic-unescaped = %x20-5B / %x5D-7E / %x80-10FFFF
+mlb-content = mlb-char / newline / mlb-escaped-nl
+mlb-char = mlb-unescaped / escaped
+mlb-quotes = 1*2quotation-mark
+mlb-unescaped = wschar / %x21 / %x23-5B / %x5D-7E / non-ascii
+mlb-escaped-nl = escape ws newline *( wschar / newline )
 
 ;; Literal String
 
@@ -95,16 +99,17 @@ literal-string = apostrophe *literal-char apostrophe
 
 apostrophe = %x27 ; ' apostrophe
 
-literal-char = %x09 / %x20-26 / %x28-10FFFF
+literal-char = %x09 / %x20-26 / %x28-7E / non-ascii
 
 ;; Multiline Literal String
 
 ml-literal-string = ml-literal-string-delim ml-literal-body ml-literal-string-delim
-
 ml-literal-string-delim = 3apostrophe
+ml-literal-body = *mll-content *( mll-quotes 1*mll-content ) [ mll-quotes ]
 
-ml-literal-body = *( ml-literal-char / newline )
-ml-literal-char = %x09 / %x20-10FFFF
+mll-content = mll-char / newline
+mll-char = %x09 / %x20-26 / %x28-7E / non-ascii
+mll-quotes = 1*2apostrophe
 
 ;; Integer
 
@@ -138,7 +143,8 @@ frac = decimal-point zero-prefixable-int
 decimal-point = %x2E               ; .
 zero-prefixable-int = DIGIT *( DIGIT / underscore DIGIT )
 
-exp = "e" float-int-part
+exp = "e" float-exp-part
+float-exp-part = [ minus / plus ] zero-prefixable-int
 
 special-float = [ minus / plus ] ( inf / nan )
 inf = %x69.6e.66  ; inf
@@ -193,8 +199,8 @@ array = array-open [ array-values ] ws-comment-newline array-close
 array-open =  %x5B ; [
 array-close = %x5D ; ]
 
-array-values =  ws-comment-newline val ws array-sep array-values
-array-values =/ ws-comment-newline val ws [ array-sep ]
+array-values =  ws-comment-newline val ws-comment-newline array-sep array-values
+array-values =/ ws-comment-newline val ws-comment-newline [ array-sep ]
 
 array-sep = %x2C  ; , Comma
 
@@ -213,21 +219,20 @@ std-table-close = ws %x5D     ; ] Right square bracket
 
 ;; Inline Table
 
-inline-table = inline-table-open inline-table-keyvals inline-table-close
+inline-table = inline-table-open [ inline-table-keyvals ] inline-table-close
 
 inline-table-open  = %x7B ws     ; {
 inline-table-close = ws %x7D     ; }
 inline-table-sep   = ws %x2C ws  ; , Comma
 
-inline-table-keyvals = [ inline-table-keyvals-non-empty ]
-inline-table-keyvals-non-empty = key keyval-sep val [ inline-table-sep inline-table-keyvals-non-empty ]
+inline-table-keyvals = keyval [ inline-table-sep inline-table-keyvals ]
 
 ;; Array Table
 
 array-table = array-table-open key array-table-close
 
 array-table-open  = %x5B.5B ws  ; [[ Double left square bracket
-array-table-close = ws %x5D.5D  ; ]] Double right quare bracket
+array-table-close = ws %x5D.5D  ; ]] Double right square bracket
 
 ;; Built-in ABNF terms, reproduced here for clarity
 

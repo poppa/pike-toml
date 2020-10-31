@@ -1,26 +1,56 @@
+# Yup
+# [ table-key ]
+# [ table-key.dotted ]
+# my-false_identifier = false
+# "my true identifer" = true
+# intval = 123
+# "quoted identifier" = 11_000_000.45
+# qstr = "Quoted string"
+# lstr = 'Literal string'
+# hex = 0xFF
+# bin = 0b1011
+# oct = 0o0111
+# exp = 1e-2
+# swestr = "Lök på laxen å dä"
+# emoji = "😂"
+# float = 0.12
+# hex = 0xFF
+# oct = 0o0734
+# bin = 0b011100
+# exp = 0E2
+# local-time = 00:00:00.001
+# full-date = 2020-12-01
+# local-date-time = 2020-12-12T00:00:00
+# offset-date-time = 2020-12-12T00:00:00.001+10:00
+# inf = inf
+# nan = nan
+# negint = -12
+# neginf = -inf
+# negnan = -nan
 
+# key1=1
+# key2= 1
+# simple-array = [ 'true' , "false"  ]
+# simple-table = {version = "2.0.0", nested-table = { sub = 1},  optional = true }
 
-  ################################################################################
-## Table
+# # mulquotstr = """
+# #   This is some
+# #   multiline string with a " single quote in it"""
 
-# Tables (also known as hash tables or dictionaries) are collections of
-  # key/value pairs. They appear in square brackets on a line by themselves.
+# # mullitstr = '''
+# #   A multiline with literal's
+# #   '''
 
-str   = [
-  "My string",
-  "Yay"
-]
+root-str = "I am Root"
+root-flt = 1.2e-3
 
-[sub-section]
+[key.sub]
+float = 1.23
+str = 'ney'
 
-table = {
-  key1: {
-    nest: "val1"
-  },
-  key2: [
-    1973-11-21T00:12:12Z,
-    {
-      "yay-man" : 23
-    }
-  ]
-}
+[key]
+int = 12
+str = "yay"
+
+[ key . sub . sam ]
+str = 'way'

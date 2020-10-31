@@ -2,58 +2,76 @@
 #define TOML_LEXER_H
 
 #ifdef TOML_LEXER_DEBUG
-# define TRACE(X...)werror("%s:%d: %s",basename(__FILE__),__LINE__,sprintf(X))
-# define PUSH_DEBUG_TOKEN(X...) do {                               \
-    push_token(TYPE_DEBUG, sprintf(X));                            \
-  } while (0)
+#  define TRACE(X...)werror("%s:%-4d: %s",basename(__FILE__),__LINE__,sprintf(X))
 #else
-# define TRACE(X...)
-# define PUSH_DEBUG_TOKEN(X...)
+#  define TRACE(X...) 0
 #endif
 
-#define CURRENT() data[cursor]
-#define CURR_COL() col + 1
-#define CURR_LINENO() rows + 1
+#define REGEX Regexp.PCRE.Widestring
+#define CASELESS Regexp.PCRE.OPTION.CASELESS
 
-#define CASE_KEY_START                                             \
-  case '0' .. '9': case 'a' .. 'z': case 'A' .. 'Z':               \
-  case '_': case '\'': case '"': case '-'
+#define CASE_VALID_KEY_CHARS \
+  case '-': \
+  case '0'..'9': \
+  case 'A'..'Z': \
+  case '_': \
+  case 'a'..'z'
 
-#define NEXT() do {                                                \
-    cursor++;                                                      \
-    col += 1;                                                      \
+protected string float_p = "[-+]?(0\\.|[1-9][0-9]*\\.)[0-9]+";
+
+protected REGEX re_int = REGEX("^[-+]?(0|[1-9][0-9]*)$");
+protected REGEX re_float = REGEX("^[-+]?" + float_p + "$");
+protected REGEX re_exp = REGEX("^[-+]?" + float_p + "[eE]-?[0-9]+");
+protected REGEX re_hex = REGEX("^[-+]?0x[0-9A-F]+$", CASELESS);
+protected REGEX re_oct = REGEX("^[-+]?0o[0-7]+$");
+protected REGEX re_bin = REGEX("^[-+]?0b[0-1]+$");
+protected REGEX re_inf = REGEX("^[-+]?inf$");
+protected REGEX re_nan = REGEX("^[-+]?nan$");
+
+protected string full_date
+  = "(\\d{4})" + "-" // year
+  + "(0[1-9]|1[0-2])" + "-" // month
+  + "(0[1-9]|[1-2][0-9]|3[0-1])"; // day
+protected string time_hour = "(0\\d|1\\d|2[0-3])";
+protected string time_minute = "([0-5]\\d)";
+protected string time_second = "([0-6]\\d(\\.\\d+)?)"; // Allow for leap-sec
+protected string partial_time
+  = time_hour + ":"
+  + time_minute + ":"
+  + time_second;
+protected string local_date_time
+  = full_date
+  + "[T]" // We don't handle space atm.
+  + partial_time;
+protected string offset_date_time
+  = local_date_time
+  + "[+-]"
+  + time_hour + ":"
+  + time_minute;
+
+protected REGEX re_local_time = REGEX("^(" + partial_time + ")$");
+protected REGEX re_full_date = REGEX("^(" + full_date + ")$");
+protected REGEX re_local_date_time = REGEX("^(" + local_date_time + ")$");
+protected REGEX re_offset_date_time = REGEX("^(" + offset_date_time + ")$" );
+
+#define SET_STATE_KEY() lex_state = STATE_KEY
+#define SET_STATE_VALUE() lex_state = STATE_VALUE
+#define IS_STATE_KEY() lex_state == STATE_KEY
+#define IS_STATE_VALUE() lex_state == STATE_VALUE
+#define POP_CTX_STACK()         \
+  do {                          \
+    if (sizeof(ctx_stack)) {    \
+      ctx_stack->pop();         \
+    }                           \
   } while (0)
 
-#define MUL_STR() \
-  (CURRENT() == STR_START && peek() == STR_START && peek(2) == STR_START)
-
-#define IS_DIGIT_START(c) \
-  (DIGIT[c] || c == '+' || c == '-' )
-
-#define die(X...)                                                  \
-  do {                                                             \
-    werror("Tokens: %O\n", tokens);                                \
-    s8 p = sprintf("DIE: %s:%d: ", basename(__FILE__),  __LINE__); \
-    p += sprintf(X);                                               \
-    exit(0, p);                                                    \
+#define EAT_COMMENT()                             \
+  do {                                            \
+    eat_whitespace_and_nl();                      \
+    while (current == "#") {                      \
+      lex_comment();                              \
+      eat_whitespace_and_nl();                    \
+    }                                             \
   } while (0)
-
-#define SYNTAX_ERROR(R...)                                         \
-  error("TOML syntax error at line %d column %d byte %d: %s.\n",   \
-        current_lineno(), current_column(), cursor, sprintf(R))
-
-#define EXPECT(C)                                                  \
-  do {                                                             \
-    if (CURRENT() != C) {                                          \
-      SYNTAX_ERROR("Expected \"%c\" got \"%c\"", C, CURRENT());    \
-    }                                                              \
-  } while (0)
-
-#ifdef TOML_ADD_WS_TOKENS
-# define PUSH_FOLD_TOKEN(TYPE,VAL) push_token((TYPE), 0, (VAL))
-#else
-# define PUSH_FOLD_TOKEN(TYPE,VAL)
-#endif
-
 
 #endif
