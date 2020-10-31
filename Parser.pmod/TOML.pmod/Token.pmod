@@ -1,3 +1,6 @@
+#charset utf-8
+#pike __REAL_VERSION__
+
 public enum Kind {
   K_NONE,
   K_KEY,
