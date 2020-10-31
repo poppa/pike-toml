@@ -266,7 +266,11 @@ class Token {
   }
 
   protected object(Calendar.Time)|object(Calendar.ISO) render_date() {
-    return Calendar.dwim_time(value);
+    if (is_modifier(M_TIME)) {
+      return Calendar.dwim_time(value);
+    } else {
+      return Calendar.dwim_day(value);
+    }
   }
 
   protected string _sprintf(int t) {

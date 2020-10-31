@@ -321,9 +321,9 @@ protected Token lex_literal_value() {
   } else if (re_full_date->match(data)) {
     return value_token(data, .Token.M_DATE);
   } else if (re_local_date_time->match(data)) {
-    return value_token(data, .Token.M_DATE);
+    return value_token(data, .Token.M_DATE | .Token.M_TIME);
   } else if (re_offset_date_time->match(data)) {
-    return value_token(data, .Token.M_DATE);
+    return value_token(data, .Token.M_DATE | .Token.M_TIME);
   }
 
   error("Unhandled value: %O\n", data);

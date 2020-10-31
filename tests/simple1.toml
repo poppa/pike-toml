@@ -52,6 +52,8 @@ hex = 0xFF
 [key]
 int = 12
 str = "yay"
+time = 12:12:12
+date = 2020-12-12T12:12:12
 
 [ key . sub . sam ]
 str = 'way'
