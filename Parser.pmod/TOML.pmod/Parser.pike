@@ -6,6 +6,7 @@ protected constant Token = .Token.Token;
 protected constant Modifier = .Token.Modifier;
 protected constant Kind = .Token.Kind;
 protected typedef array(Token) TokenArray;
+protected multiset(string) defined_paths = (<>);
 
 public mixed parse_file(Stdio.File file) {
   return this::parse(Lexer(file));
@@ -34,6 +35,11 @@ public mixed parse(Lexer lexer) {
       case Kind.Key: {
         Token val = lexer->lex();
         expect_value(val);
+
+        if (!undefinedp(p[tok->value])) {
+          error("Trying to overwrite existing value\n");
+        }
+
         p[tok->value] = val->pike_value();
       } break;
 
@@ -63,17 +69,26 @@ public mixed parse(Lexer lexer) {
 protected mapping mkmapping(mapping old, TokenArray keys) {
   mapping p = old;
   mapping tmp = ([]);
+  array(string)|string path = ({});
 
   foreach (keys, Token t) {
     tmp = p[t->value];
+    path += ({ t->value });
 
     if (!tmp) {
       tmp = p[t->value] = ([]);
-      p = tmp;
-    } else {
-      p = tmp;
     }
+
+    p = tmp;
   }
+
+  path = path * ".";
+
+  if (defined_paths[path]) {
+    error("Trying to redefine %q\n", path);
+  }
+
+  defined_paths[path] = true;
 
   return p;
 }
