@@ -171,19 +171,19 @@ class Token {
     return is;
   }
 
-  public bool is_standard_table_open() {
+  public bool is_table_open() {
     return is_kind(Kind.TableOpen);
   }
 
-  public bool is_standard_table_close() {
+  public bool is_table_close() {
     return is_kind(Kind.TableClose);
   }
 
-  public bool is_array_open() {
+  public bool is_inline_array_open() {
     return is_kind(Kind.InlineArrayOpen);
   }
 
-  public bool is_array_close() {
+  public bool is_inline_array_close() {
     return is_kind(Kind.InlineArrayClose);
   }
 
@@ -195,11 +195,11 @@ class Token {
     return is_kind(Kind.InlineTableClose);
   }
 
-  public bool is_standard_array_open() {
-    return is_kind(Kind.TableOpen);
+  public bool is_table_array_open() {
+    return is_kind(Kind.TableArrayOpen);
   }
 
-  public bool is_standard_array_close() {
+  public bool is_table_array_close() {
     return is_kind(Kind.TableArrayClose);
   }
 
