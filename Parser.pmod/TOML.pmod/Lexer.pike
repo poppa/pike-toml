@@ -311,7 +311,7 @@ protected Token lex_literal_value() {
   } else if (re_hex->match(data)) {
     return value_token(data, Modifier.Number | Modifier.Hex);
   } else if (re_oct->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Oct);
+    return value_token(replace(data, "o", ""), Modifier.Number | Modifier.Oct);
   } else if (re_bin->match(data)) {
     return value_token(data, Modifier.Number | Modifier.Bin);
   } else if (re_inf->match(data)) {
