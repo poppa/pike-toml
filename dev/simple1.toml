@@ -47,13 +47,19 @@ root-flt = 1.2e-3
 [key.sub]
 float = 1.23
 str = 'ney'
-hex = 0xFF
+# hex = 0xFF
 
 [key]
 int = 12
 str = "yay"
-time = 12:12:12
-date = 2020-12-12T12:12:12
+# time = 12:12:12
+date = 2020-12-12T12:12:12+12:00
 
-[ key . sub . sam ]
+[ key . sub. sam ]
 str = 'way'
+
+[key.bim]
+bin = 0b1101
+fa = "way"
+1="yes"
+2="no"
