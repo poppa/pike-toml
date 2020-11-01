@@ -548,7 +548,6 @@ protected string read_escape_chars() {
       string v = current;
       advance();
       return "\\" + v;
-      break;
     case 0x75: // uXXXX                U+XXXX
       error("Unicode not implemented yet\n");
       break;
