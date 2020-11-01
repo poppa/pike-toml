@@ -250,19 +250,12 @@ class Token {
       return (float)value;
     }
 
-    if (is_modifier(Modifier.Hex)) {
+    if (
+      is_modifier(Modifier.Hex) ||
+      is_modifier(Modifier.Bin) ||
+      is_modifier(Modifier.Oct)
+    ) {
       sscanf(value, "%D", int v);
-      return v;
-    }
-
-    if (is_modifier(Modifier.Bin)) {
-      sscanf(value, "%D", int v);
-      return v;
-    }
-
-    if (is_modifier(Modifier.Oct)) {
-      string tmp = replace(replace(value, "O", "o"), "o", "");
-      sscanf(tmp, "%D", int v);
       return v;
     }
 
