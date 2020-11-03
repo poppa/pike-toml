@@ -65,7 +65,7 @@ public string kind_to_string(Kind.Type kind) {
   return kind_map[kind];
 }
 
-protected string modifier_to_string(Modifier.Type modifier) {
+public string modifier_to_string(Modifier.Type modifier) {
   array(string) s = ({});
 
   if ((modifier & Modifier.QuotedString) == Modifier.QuotedString) {
@@ -241,7 +241,7 @@ class Token {
     }
   }
 
-  protected int|float render_number() {
+  protected int|float|object(Int.inf) render_number() {
     if (is_modifier(Modifier.Int)) {
       return (int)value;
     }
@@ -257,6 +257,15 @@ class Token {
     ) {
       sscanf(value, "%D", int v);
       return v;
+    }
+
+    if (is_modifier(Modifier.Inf)) {
+      return Int.inf;
+    }
+
+    if (is_modifier(Modifier.Nan)) {
+      werror("Warning: Pike has no Nan type. You have to manage it manually\n");
+      return 0.0;
     }
 
     error("Unhandled number type %O\n", modifier_to_string());
