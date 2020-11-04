@@ -118,5 +118,75 @@ int main() {
         expect(t->is_value(Token.Modifier.Hex))->to_equal(false);
       }
     );
+
+    test(
+      "Token->is_table_open() should return true when Kind is table open",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.TableOpen, "[");
+        expect(t->is_table_open())->to_equal(true);
+      }
+    );
+
+    test(
+      "Token->is_table_close() should return true when Kind is table close",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.TableClose, "]");
+        expect(t->is_table_close())->to_equal(true);
+      }
+    );
+
+    test(
+      "Token->is_inline_table_open() should return true when Kind is "
+      "inline table open",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.InlineTableOpen, "{");
+        expect(t->is_inline_table_open())->to_equal(true);
+      }
+    );
+
+    test(
+      "Token->is_inline_table_close() should return true when Kind is "
+      "inline table close",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.InlineTableClose, "}");
+        expect(t->is_inline_table_close())->to_equal(true);
+      }
+    );
+
+    test(
+      "Token->is_inline_array_open() should return true when Kind is "
+      "inline array open",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.InlineArrayOpen, "[");
+        expect(t->is_inline_array_open())->to_equal(true);
+      }
+    );
+
+    test(
+      "Token->is_inline_array_close() should return true when Kind is "
+      "inline array lose",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.InlineArrayClose, "]");
+        expect(t->is_inline_array_close())->to_equal(true);
+      }
+    );
+
+    test(
+      "Token->is_table_array_open() should return true when Kind is "
+      "table array open",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.TableArrayOpen, "[[");
+        expect(t->is_table_array_open())->to_equal(true);
+      }
+    );
+
+    test(
+      "Token->is_table_array_close() should return true when Kind is "
+      "table array close",
+      lambda () {
+        Token.Token t = Token.new(Token.Kind.TableArrayClose, "[[");
+        expect(t->is_table_array_close())->to_equal(true);
+      }
+    );
   });
 }
