@@ -127,7 +127,7 @@ public mixed lex() {
 
   EAT_COMMENT();
 
-  if (current == "") {
+  if (current == "" || !current) {
     return UNDEFINED;
   }
 
@@ -177,7 +177,11 @@ public mixed lex() {
         return tok;
       } else if (IS_STATE_VALUE()) {
         Token tok = lex_value();
-        push_back();
+
+        if (current) {
+          push_back();
+        }
+
         SET_STATE_KEY();
         return tok;
       }
@@ -199,7 +203,7 @@ protected string advance() {
     return current;
   }
 
-  return UNDEFINED;
+  return current = UNDEFINED;
 }
 
 protected Token lex_key() {
@@ -662,7 +666,7 @@ protected string read_until(multiset(string) chars) {
   while (current) {
     advance();
 
-    if (chars[current] || !current) {
+    if (!current || chars[current]) {
       break;
     }
 
