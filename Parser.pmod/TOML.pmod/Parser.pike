@@ -2,19 +2,31 @@
 #pike __REAL_VERSION__
 
 protected typedef array(mixed)|mapping(string:mixed) Container;
+protected typedef array(Token) TokenArray;
 
 protected constant Lexer = .Lexer;
 protected constant Token = .Token.Token;
 protected constant Modifier = .Token.Modifier;
 protected constant Kind = .Token.Kind;
-protected typedef array(Token) TokenArray;
 protected multiset(string) defined_paths = (<>);
 
-public mixed parse_file(Stdio.File file) {
+protected multiset(Kind.Type) expect_as_value = (<
+  Kind.Value,
+  Kind.InlineArrayOpen,
+  Kind.InlineTableOpen,
+>);
+
+protected multiset(Kind.Type) expect_as_key = (<
+  Kind.Key,
+  Kind.InlineArrayOpen,
+  Kind.InlineTableOpen,
+>);
+
+public mapping parse_file(Stdio.File file) {
   return this::parse(Lexer(file));
 }
 
-public variant mixed parse_file(string path) {
+public variant mapping parse_file(string path) {
   if (!Stdio.exist(path)) {
     error("Unknown file %q\n", path);
   }
@@ -22,14 +34,13 @@ public variant mixed parse_file(string path) {
   this::parse(Lexer(Stdio.File(path)));
 }
 
-public mixed parse_string(string toml_data) {
+public mapping parse_string(string toml_data) {
   return this::parse(Lexer(Stdio.FakeFile(toml_data)));
 }
 
-private mapping parsed_value = ([]);
-private Container current_container = parsed_value;
+private Container current_container = ([]);
 
-public mixed parse(Lexer lexer) {
+public mapping parse(Lexer lexer) {
   while (Token t = lexer->lex()) {
     switch (t->kind) {
       case Kind.Key:
@@ -38,8 +49,9 @@ public mixed parse(Lexer lexer) {
     }
   }
 
-  werror("Parsed value: %O\n", parsed_value);
   werror("Curr container: %O\n", current_container);
+
+  return current_container;
 }
 
 protected void parse_key(Token token, Lexer lexer) {
@@ -48,16 +60,8 @@ protected void parse_key(Token token, Lexer lexer) {
   }
 
   expect_kind(token, Kind.Key);
-
   Token next = lexer->lex();
-
-  expect_one_of(next, (<
-    Kind.Value,
-    Kind.InlineArrayOpen,
-    Kind.InlineTableOpen
-  >));
-
-  werror("Ok, parse key: %O\n", next);
+  expect_one_of(next, expect_as_value);
 
   mixed value;
 
@@ -76,8 +80,6 @@ protected void parse_key(Token token, Lexer lexer) {
   }
 
   current_container[token->value] = value;
-
-  werror("CurrContainer: %O\n", current_container);
 }
 
 protected mapping(string:mixed) parse_inline_table(Token token, Lexer lexer) {
@@ -93,11 +95,7 @@ protected mapping(string:mixed) parse_inline_table(Token token, Lexer lexer) {
       break;
     }
 
-    expect_one_of(next, (<
-      Kind.Key,
-      Kind.InlineTableOpen,
-      Kind.InlineArrayOpen
-    >));
+    expect_one_of(next, expect_as_key);
 
     switch (next->kind) {
       case Kind.Key:
@@ -115,16 +113,13 @@ protected mapping(string:mixed) parse_inline_table(Token token, Lexer lexer) {
   }
 
   expect_kind(next, Kind.InlineTableClose);
-
   current_container = prev_container;
 
-  werror("table mapping: %O\n", value);
   return value;
 }
 
 protected array(mixed) parse_inline_array(Token token, Lexer lexer) {
   expect_kind(token, Kind.InlineArrayOpen);
-
 
   Container prev_container = current_container;
   array values = ({});
@@ -137,11 +132,7 @@ protected array(mixed) parse_inline_array(Token token, Lexer lexer) {
       break;
     }
 
-    expect_one_of(next, (<
-      Kind.Value,
-      Kind.InlineTableOpen,
-      Kind.InlineTableOpen
-    >));
+    expect_one_of(next, expect_as_value);
 
     if (!next->is_value()) {
       array|mapping v;
@@ -171,7 +162,6 @@ protected array(mixed) parse_inline_array(Token token, Lexer lexer) {
         );
       }
     }
-
 
     values += ({ next->pike_value() });
   }
@@ -299,7 +289,7 @@ protected void expect_one_of(Token t, multiset(Kind.Type) kinds) {
   if (!kinds[t->kind]) {
     error(
       "Expected kind of %q, got %O\n",
-      String.implode_nicely(map((array) kinds, .Token.kind_to_string), "or"),
+      String.implode_nicely(map((array)kinds, .Token.kind_to_string), "or"),
       t->kind_to_string()
     );
   }
