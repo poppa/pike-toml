@@ -264,8 +264,7 @@ class Token {
     }
 
     if (is_modifier(Modifier.Nan)) {
-      werror("Warning: Pike has no Nan type. You have to manage it manually\n");
-      return 0.0;
+      return Math.nan;
     }
 
     error("Unhandled number type %O\n", modifier_to_string());

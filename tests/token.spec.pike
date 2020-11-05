@@ -60,7 +60,7 @@ int main() {
         expect(tok("0071", MOD(Number)|MOD(Oct)))->to_equal(57);
         expect(tok("0b0110", MOD(Number)|MOD(Oct)))->to_equal(6);
         expect(tok("inf", MOD(Number)|MOD(Inf)))->to_equal(Int.inf);
-        expect(tok("nan", MOD(Number)|MOD(Nan)))->to_equal(0.0);
+        expect((string)tok("nan", MOD(Number)|MOD(Nan)))->to_be("nan");
 
         expect(tok("2020-11-03", MOD(Date)))
           ->to_equal(Calendar.dwim_day("2020-11-03"));
