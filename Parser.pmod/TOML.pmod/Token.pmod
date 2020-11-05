@@ -33,23 +33,24 @@ public mapping(int:string) kind_map = ([
 
 class Modifier {
   public enum Type {
-    None = 0,
-    QuotedString  = 1 << 0,
-    LiteralString = 1 << 1,
-    Multiline   = 1 << 2,
-    Number      = 1 << 3,
-    Boolean     = 1 << 4,
-    Date        = 1 << 5,
-    Int         = 1 << 6,
-    Float       = 1 << 7,
-    Exp         = 1 << 8,
-    Hex         = 1 << 9,
-    Oct         = 1 << 10,
-    Bin         = 1 << 11,
-    Inf         = 1 << 12,
-    Nan         = 1 << 13,
-    Time        = 1 << 14,
-    Dotted      = 1 << 15,
+    None       = 0,
+    String     = 1 << 0,
+    Quoted     = 1 << 1,
+    Literal    = 1 << 2,
+    Multiline  = 1 << 3,
+    Number     = 1 << 4,
+    Boolean    = 1 << 5,
+    Date       = 1 << 6,
+    Int        = 1 << 7,
+    Float      = 1 << 8,
+    Exp        = 1 << 9,
+    Hex        = 1 << 10,
+    Oct        = 1 << 11,
+    Bin        = 1 << 12,
+    Inf        = 1 << 13,
+    Nan        = 1 << 14,
+    Time       = 1 << 15,
+    Dotted     = 1 << 16,
   }
 }
 
@@ -68,12 +69,16 @@ public string kind_to_string(Kind.Type kind) {
 public string modifier_to_string(Modifier.Type modifier) {
   array(string) s = ({});
 
-  if ((modifier & Modifier.QuotedString) == Modifier.QuotedString) {
-    s += ({ "quoted-string" });
+  if ((modifier & Modifier.String) == Modifier.String) {
+    s += ({ "string" });
   }
 
-  if ((modifier & Modifier.LiteralString) == Modifier.LiteralString) {
-    s += ({ "literal-string" });
+  if ((modifier & Modifier.Quoted) == Modifier.Quoted) {
+    s += ({ "quoted" });
+  }
+
+  if ((modifier & Modifier.Literal) == Modifier.Literal) {
+    s += ({ "literal" });
   }
 
   if ((modifier & Modifier.Multiline) == Modifier.Multiline) {
@@ -135,8 +140,17 @@ public string modifier_to_string(Modifier.Type modifier) {
   return s * "|";
 }
 
+public bool is_string_value(Token token) {
+  return token->is_value() && has_modifier(token, Modifier.String);
+}
+
+public bool has_modifier(Token token, Modifier.Type modifier) {
+  return (token->modifier & modifier) == modifier;
+}
+
 private function _kind_to_string = kind_to_string;
 private function _modifier_to_string = modifier_to_string;
+private function _is_string_value = is_string_value;
 
 class Token {
   public Kind.Type kind;
@@ -211,7 +225,11 @@ class Token {
     return (this::modifier & modifier) == modifier;
   }
 
-  protected string modifier_to_string() {
+  public bool is_string_value() {
+    return _is_string_value(this);
+  }
+
+  public string modifier_to_string() {
     return _modifier_to_string(modifier);
   }
 

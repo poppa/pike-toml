@@ -30,36 +30,40 @@
 
 # key1=1
 # key2= 1
-# simple-array = [ 'true' , "false"  ]
+simple-array = [ 1 , 2 ]
+simple-value = 1
+simple-table = { str = "value", num = 2, nested-array = [ { v = [1,2], c = 2 }, { v = [1,2] } ] }
 # simple-table = {version = "2.0.0", nested-table = { sub = 1},  optional = true }
 
-# # mulquotstr = """
-# #   This is some
-# #   multiline string with a " single quote in it"""
+# mulquotstr = """
+#   This is some
+#   multiline string with a " single quote in it"""
 
 # # mullitstr = '''
 # #   A multiline with literal's
 # #   '''
 
-root-str = "I am Root"
-root-flt = 1.2e-3
+# ---------------------
 
-[key.sub]
-float = 1.23
-str = 'ney'
-# hex = 0xFF
+# root-str = "I am Root"
+# root-flt = 1.2e-3
 
-[key]
-int = 12
-str = "yay"
-# time = 12:12:12
-date = 2020-12-12T12:12:12+12:00
+# [key.sub]
+# float = 1.23
+# str = 'ney'
+# # hex = 0xFF
 
-[ key . sub. sam ]
-str = 'way'
+# [key]
+# int = 12
+# str = "yay"
+# # time = 12:12:12
+# date = 2020-12-12T12:12:12+12:00
 
-[key.bim]
-bin = 0b1101
-fa = "way"
-1="yes"
-2="no"
+# [ key . sub. sam ]
+# str = 'way'
+
+# [key.bim]
+# bin = 0b1101
+# fa = "way"
+# 1="yes"
+# 2="no"

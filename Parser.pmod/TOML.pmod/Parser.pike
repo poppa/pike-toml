@@ -1,6 +1,8 @@
 #charset utf-8
 #pike __REAL_VERSION__
 
+protected typedef array(mixed)|mapping(string:mixed) Container;
+
 protected constant Lexer = .Lexer;
 protected constant Token = .Token.Token;
 protected constant Modifier = .Token.Modifier;
@@ -24,6 +26,164 @@ public mixed parse_string(string toml_data) {
   return this::parse(Lexer(Stdio.FakeFile(toml_data)));
 }
 
+private mapping parsed_value = ([]);
+private Container current_container = parsed_value;
+
+public mixed parse(Lexer lexer) {
+  while (Token t = lexer->lex()) {
+    switch (t->kind) {
+      case Kind.Key:
+        parse_key(t, lexer);
+        break;
+    }
+  }
+
+  werror("Parsed value: %O\n", parsed_value);
+  werror("Curr container: %O\n", current_container);
+}
+
+protected void parse_key(Token token, Lexer lexer) {
+  if (!mappingp(current_container)) {
+    error("Expected current_container to be a mapping");
+  }
+
+  expect_kind(token, Kind.Key);
+
+  Token next = lexer->lex();
+
+  expect_one_of(next, (<
+    Kind.Value,
+    Kind.InlineArrayOpen,
+    Kind.InlineTableOpen
+  >));
+
+  werror("Ok, parse key: %O\n", next);
+
+  mixed value;
+
+  switch (next->kind) {
+    case Kind.InlineArrayOpen:
+      value = parse_inline_array(next, lexer);
+      break;
+
+    case Kind.InlineTableOpen:
+      value = parse_inline_table(next, lexer);
+      break;
+
+    case Kind.Value:
+      value = next->pike_value();
+      break;
+  }
+
+  current_container[token->value] = value;
+
+  werror("CurrContainer: %O\n", current_container);
+}
+
+protected mapping(string:mixed) parse_inline_table(Token token, Lexer lexer) {
+  expect_kind(token, Kind.InlineTableOpen);
+
+  Container prev_container = current_container;
+  mapping value = ([]);
+  current_container = value;
+
+  Token next;
+  while (next = lexer->lex()) {
+    if (next->is_inline_table_close()) {
+      break;
+    }
+
+    expect_one_of(next, (<
+      Kind.Key,
+      Kind.InlineTableOpen,
+      Kind.InlineArrayOpen
+    >));
+
+    switch (next->kind) {
+      case Kind.Key:
+        parse_key(next, lexer);
+        break;
+
+      case Kind.InlineArrayOpen:
+        parse_inline_array(next, lexer);
+        break;
+
+      case Kind.InlineTableOpen:
+        parse_inline_table(next, lexer);
+        break;
+    }
+  }
+
+  expect_kind(next, Kind.InlineTableClose);
+
+  current_container = prev_container;
+
+  werror("table mapping: %O\n", value);
+  return value;
+}
+
+protected array(mixed) parse_inline_array(Token token, Lexer lexer) {
+  expect_kind(token, Kind.InlineArrayOpen);
+
+
+  Container prev_container = current_container;
+  array values = ({});
+  current_container = values;
+  Modifier.Type first_type;
+  Token next;
+
+  while (next = lexer->lex()) {
+    if (next->is_inline_array_close()) {
+      break;
+    }
+
+    expect_one_of(next, (<
+      Kind.Value,
+      Kind.InlineTableOpen,
+      Kind.InlineTableOpen
+    >));
+
+    if (!next->is_value()) {
+      array|mapping v;
+      if (next->is_inline_array_open()) {
+        v = parse_inline_array(next, lexer);
+      } else if (next->is_inline_table_open()) {
+        v = parse_inline_table(next, lexer);
+      }
+
+      // FIXME: These have to type checks
+      values += ({ v });
+      continue;
+    }
+
+    if (!first_type) {
+      first_type = next->is_string_value()
+        ? .Token.Modifier.String
+        :  next->modifier;
+    } else {
+      if (!.Token.has_modifier(next, first_type)) {
+        error(
+          "Array values must be of the same type. "
+          "Array is typed as %O, got value of type %O\n",
+          .Token.modifier_to_string(first_type),
+          // .Token.modifier_to_string(next->modifier)
+          next->modifier_to_string()
+        );
+      }
+    }
+
+
+    values += ({ next->pike_value() });
+  }
+
+  expect_kind(next, Kind.InlineArrayClose);
+  current_container = prev_container;
+
+  return values;
+}
+
+#if 0
+
 public mixed parse(Lexer lexer) {
   mapping p = ([]);
   mapping top = p;
@@ -34,13 +194,23 @@ public mixed parse(Lexer lexer) {
       // Handle key
       case Kind.Key: {
         Token val = lexer->lex();
-        expect_value(val);
+        expect_one_of(val, (<
+          Kind.Value,
+          Kind.InlineArrayOpen,
+          Kind.InlineTableOpen
+        >));
 
-        if (!undefinedp(p[tok->value])) {
-          error("Trying to overwrite existing value\n");
+        if (val->is_value()) {
+          if (!undefinedp(p[tok->value])) {
+            error("Trying to overwrite existing value\n");
+          }
+
+          p[tok->value] = val->pike_value();
+        } else {
+          werror("Handle some shit now\n");
+          exit(0);
         }
 
-        p[tok->value] = val->pike_value();
       } break;
 
       //
@@ -93,6 +263,8 @@ protected mapping mkmapping(mapping old, TokenArray keys) {
   return p;
 }
 
+#endif
+
 protected TokenArray read_keys(Lexer lexer) {
   TokenArray out = ({});
 
@@ -115,6 +287,20 @@ protected void expect_value(Token t) {
 
 protected void expect_kind(Token t, Kind.Type kind) {
   if (!t->is_kind(kind)) {
-    error("Expected kind %O, got %O\n", kind, t->kind);
+    error(
+      "Expected kind %O, got %O\n",
+      .Token.kind_to_string(kind),
+      t->kind_to_string()
+    );
+  }
+}
+
+protected void expect_one_of(Token t, multiset(Kind.Type) kinds) {
+  if (!kinds[t->kind]) {
+    error(
+      "Expected kind of %q, got %O\n",
+      String.implode_nicely(map((array) kinds, .Token.kind_to_string), "or"),
+      t->kind_to_string()
+    );
   }
 }

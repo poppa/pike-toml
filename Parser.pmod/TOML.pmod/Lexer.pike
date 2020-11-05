@@ -236,12 +236,15 @@ protected Token lex_value() {
     case 0x22: {
       if (peek(2) == "\"\"") {
         string value = read_multiline_quoted_string();
-        return value_token(value, Modifier.QuotedString | Modifier.Multiline);
+        return value_token(
+          value,
+          Modifier.String | Modifier.Quoted | Modifier.Multiline
+        );
       }
 
       string value = read_quoted_string();
 
-      return value_token(value, Modifier.QuotedString);
+      return value_token(value, Modifier.String | Modifier.Quoted);
     } break;
 
     //
@@ -249,11 +252,14 @@ protected Token lex_value() {
     case 0x27: {
       if (peek(2) == "''") {
         string value = read_multiline_literal_string();
-        return value_token(value, Modifier.LiteralString | Modifier.Multiline);
+        return value_token(
+          value,
+          Modifier.String | Modifier.Literal | Modifier.Multiline
+        );
       }
 
       string value = read_litteral_string();
-      return value_token(value, Modifier.LiteralString);
+      return value_token(value, Modifier.String | Modifier.Literal);
     } break;
 
     //
@@ -387,12 +393,12 @@ protected Token lex_key_low() {
 
   switch (current[0]) {
     case '"':
-      modifier = Modifier.QuotedString;
+      modifier = Modifier.String | Modifier.Quoted;
       value = read_quoted_string();
       break;
 
     case '\'':
-      modifier = Modifier.LiteralString;
+      modifier = Modifier.String | Modifier.Literal;
       value = read_litteral_string();
       break;
 

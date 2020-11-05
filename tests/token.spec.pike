@@ -25,8 +25,8 @@ int main() {
     test("Check Token.Modifier", lambda () {
       #define mtos(M) stringp(Token.modifier_to_string(Token.Modifier.##M))
 
-      expect(mtos(QuotedString))->to_equal(true);
-      expect(mtos(LiteralString))->to_equal(true);
+      expect(mtos(Quoted))->to_equal(true);
+      expect(mtos(Literal))->to_equal(true);
       expect(mtos(Multiline))->to_equal(true);
       expect(mtos(Number))->to_equal(true);
       expect(mtos(Boolean))->to_equal(true);
@@ -60,7 +60,7 @@ int main() {
         expect(tok("0071", MOD(Number)|MOD(Oct)))->to_equal(57);
         expect(tok("0b0110", MOD(Number)|MOD(Oct)))->to_equal(6);
         expect(tok("inf", MOD(Number)|MOD(Inf)))->to_equal(Int.inf);
-        expect((string)tok("nan", MOD(Number)|MOD(Nan)))->to_be("nan");
+        expect((string)tok("nan", MOD(Number)|MOD(Nan)))->to_equal("nan");
 
         expect(tok("2020-11-03", MOD(Date)))
           ->to_equal(Calendar.dwim_day("2020-11-03"));
@@ -69,11 +69,11 @@ int main() {
         expect(tok("11:11:11", MOD(Date)|MOD(Time)))
           ->to_equal(Calendar.dwim_time("11:11:11"));
 
-        expect(tok("Hello\"s", MOD(QuotedString)))->to_equal("Hello\"s");
-        expect(tok("Hello\\1s", MOD(LiteralString)))->to_equal("Hello\\1s");
-        expect(tok("Hello\nworld", MOD(QuotedString)|MOD(Dotted)))
+        expect(tok("Hello\"s", MOD(Quoted)))->to_equal("Hello\"s");
+        expect(tok("Hello\\1s", MOD(Literal)))->to_equal("Hello\\1s");
+        expect(tok("Hello\nworld", MOD(Quoted)|MOD(Dotted)))
           ->to_equal("Hello\nworld");
-        expect(tok("Hello\nworld", MOD(LiteralString)|MOD(Dotted)))
+        expect(tok("Hello\nworld", MOD(Literal)|MOD(Dotted)))
           ->to_equal("Hello\nworld");
 
         #undef MOD
