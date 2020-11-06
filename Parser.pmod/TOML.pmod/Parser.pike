@@ -31,7 +31,7 @@ public variant mapping parse_file(string path) {
     error("Unknown file %q\n", path);
   }
 
-  return this::parse(Lexer(Stdio.File(path)));
+  return this::parse(Lexer(Stdio.File(path, "r")));
 }
 
 public mapping parse_string(string toml_data) {
