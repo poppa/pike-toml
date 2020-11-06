@@ -1,2 +1,2 @@
 test:
-	pike -M Parser.pmod tests/run.pike
+	pike -M Parser.pmod tests/run.pike $(file)
