@@ -1,7 +1,7 @@
 // Run with: pike -M../Parser.pmod parser.pike
 //       or: pike -M../Parser.pmod -DTOML_PARSER_DEBUG parser.pike
 
-#include "test.h"
+#include "timer.h"
 
 
 int main() {
