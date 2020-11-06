@@ -6,12 +6,12 @@
 Stdio.File DATA = Stdio.File(combine_path(__DIR__, "Cargo.toml"));
 
 int main() {
-  TOML.Lexer lexer = TOML.Lexer(DATA);
-  array(TOML.Token.Token) toks = ({});
+  Parser.TOML.Lexer lexer = Parser.TOML.Lexer(DATA);
+  array(Parser.TOML.Token.Token) toks = ({});
 
   START_TIMER();
 
-  while (TOML.Token.Token tok = lexer->lex()) {
+  while (Parser.TOML.Token.Token tok = lexer->lex()) {
     werror("::::::::: %O\n", tok);
     toks += ({ tok });
   }

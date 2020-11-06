@@ -5,11 +5,11 @@
 
 
 int main() {
-  TOML.Parser parser = TOML.Parser();
+  // TOML.Parser parser = TOML.Parser();
 
   START_TIMER();
 
-  mapping res = parser->parse_file(combine_path(__DIR__, "Cargo.toml"));
+  mapping res = Parser.TOML.Parser()->parse_file(combine_path(__DIR__, "simple1.toml"));
   werror("Res: %O\n", res);
 
 

@@ -1,6 +1,6 @@
 // https://github.com/poppa/pest
 import Pest;
-import TOML;
+import Parser.TOML;
 
 int main() {
   describe("Basic Lexer", lambda () {
