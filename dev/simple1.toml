@@ -30,9 +30,11 @@
 
 # key1=1
 # key2= 1
-simple-array = [ 1 , 2 ]
-simple-value = 1
-simple-table = { str = "value", num = 2, nested-array = [ { v = [1,2], c = 2 }, { v = [1,2] } ] }
+
+# simple-array = [ 1 , 2 ]
+# simple-value = 1
+# simple-table = { str = "value", num = 2, nested-array = [ { v = [1,2], c = 2 }, { v = [1,2] } ] }
+
 # simple-table = {version = "2.0.0", nested-table = { sub = 1},  optional = true }
 
 # mulquotstr = """
@@ -63,7 +65,27 @@ simple-table = { str = "value", num = 2, nested-array = [ { v = [1,2], c = 2 }, 
 # str = 'way'
 
 # [key.bim]
-# bin = 0b1101
+# bin = [0b1101, 0b111]
 # fa = "way"
 # 1="yes"
 # 2="no"
+
+# [table.deep]
+# key = 1
+
+# [table.root]
+# key = { val = 'a', bajs = 'yes' }
+
+# [table]
+# key = 3
+
+[top]
+always = "yes"
+
+[[top.array]]
+key = 1
+key2 = { key = "one", val = 1 }
+
+[[top.array]]
+key = 1
+key2 = { key = "two", val = 2 }

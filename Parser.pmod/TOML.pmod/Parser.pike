@@ -1,7 +1,7 @@
 #charset utf-8
 #pike __REAL_VERSION__
 
-protected typedef array(mixed)|mapping(string:mixed) Container;
+protected typedef RefArray|mapping(string:mixed) Container;
 protected typedef array(Token) TokenArray;
 
 protected constant Lexer = .Lexer;
@@ -31,32 +31,94 @@ public variant mapping parse_file(string path) {
     error("Unknown file %q\n", path);
   }
 
-  this::parse(Lexer(Stdio.File(path)));
+  return this::parse(Lexer(Stdio.File(path)));
 }
 
 public mapping parse_string(string toml_data) {
   return this::parse(Lexer(Stdio.FakeFile(toml_data)));
 }
 
-private Container current_container = ([]);
+private Container current_container;
+private mapping top;
 
 public mapping parse(Lexer lexer) {
+  current_container = ([]);
+  top = current_container;
+
   while (Token t = lexer->lex()) {
     switch (t->kind) {
       case Kind.Key:
         parse_key(t, lexer);
         break;
+
+      case Kind.TableOpen:
+        parse_table_open(t, lexer);
+        break;
+
+      case Kind.TableArrayOpen:
+        parse_table_array_open(t, lexer);
+        break;
     }
   }
 
-  werror("Curr container: %O\n", current_container);
+  normalize_result();
 
-  return current_container;
+  return top;
+}
+
+protected void normalize_result() {
+  void mapit(mapping m) {
+    foreach (m; string key; mixed val) {
+      if (is_ref_array(val)) {
+        m[key] = (array)val;
+      } else if (mappingp(val)) {
+        this_function(val);
+      }
+    }
+  };
+
+  mapit(top);
+}
+
+protected void parse_table_array_open(Token token, Lexer lexer) {
+  expect_kind(token, Kind.TableArrayOpen);
+  TokenArray keys = read_keys(lexer);
+  RefArray a = mkarray(top, keys);
+  expect_kind(lexer->lex(), Kind.TableArrayClose);
+
+  mapping c = ([]);
+  Container old_container = current_container;
+  current_container = c;
+
+  Token next = lexer->lex();
+
+  do {
+    expect_one_of(next, (< Kind.Key >));
+    parse_key(next, lexer);
+    Token peek = lexer->peek_token();
+
+    if (!peek || !peek->is_key()) {
+      break;
+    }
+  } while (next = lexer->lex());
+
+  current_container = old_container;
+  a += ({ c });
+}
+
+protected void parse_table_open(Token token, Lexer lexer) {
+  expect_kind(token, Kind.TableOpen);
+
+  TokenArray keys = read_keys(lexer);
+  mapping m = this::mkmapping(top, keys);
+  current_container = m;
+
+  expect_kind(lexer->lex(), Kind.TableClose);
 }
 
 protected void parse_key(Token token, Lexer lexer) {
   if (!mappingp(current_container)) {
-    error("Expected current_container to be a mapping");
+    error("Expected current_container to be a mapping\n");
   }
 
   expect_kind(token, Kind.Key);
@@ -118,11 +180,11 @@ protected mapping(string:mixed) parse_inline_table(Token token, Lexer lexer) {
   return value;
 }
 
-protected array(mixed) parse_inline_array(Token token, Lexer lexer) {
+protected RefArray parse_inline_array(Token token, Lexer lexer) {
   expect_kind(token, Kind.InlineArrayOpen);
 
   Container prev_container = current_container;
-  array values = ({});
+  RefArray values = RefArray();
   current_container = values;
   Modifier.Type first_type;
   Token next;
@@ -135,7 +197,8 @@ protected array(mixed) parse_inline_array(Token token, Lexer lexer) {
     expect_one_of(next, expect_as_value);
 
     if (!next->is_value()) {
-      array|mapping v;
+      Container v;
+
       if (next->is_inline_array_open()) {
         v = parse_inline_array(next, lexer);
       } else if (next->is_inline_table_open()) {
@@ -172,60 +235,6 @@ protected array(mixed) parse_inline_array(Token token, Lexer lexer) {
   return values;
 }
 
-#if 0
-
-public mixed parse(Lexer lexer) {
-  mapping p = ([]);
-  mapping top = p;
-
-  while (Token tok = lexer->lex()) {
-    switch (tok->kind) {
-      //
-      // Handle key
-      case Kind.Key: {
-        Token val = lexer->lex();
-        expect_one_of(val, (<
-          Kind.Value,
-          Kind.InlineArrayOpen,
-          Kind.InlineTableOpen
-        >));
-
-        if (val->is_value()) {
-          if (!undefinedp(p[tok->value])) {
-            error("Trying to overwrite existing value\n");
-          }
-
-          p[tok->value] = val->pike_value();
-        } else {
-          werror("Handle some shit now\n");
-          exit(0);
-        }
-
-      } break;
-
-      //
-      // Handle std table
-      case Kind.TableOpen: {
-        TokenArray keys = read_keys(lexer);
-        expect_kind(lexer->lex(), Kind.TableClose);
-
-        p = mkmapping(top, keys);
-
-        if (!sizeof(indices(p))) {
-          top = p + top;
-        }
-      } break;
-
-      //
-      // Don't dare getting here
-      default:
-        exit(1, "%O not implemented yet\n", tok);
-    }
-  }
-
-  werror("Converted: %O\n", top);
-}
-
 protected mapping mkmapping(mapping old, TokenArray keys) {
   mapping p = old;
   mapping tmp = ([]);
@@ -253,7 +262,38 @@ protected mapping mkmapping(mapping old, TokenArray keys) {
   return p;
 }
 
-#endif
+protected RefArray mkarray(mapping old, TokenArray keys) {
+  Container p = old;
+  Container tmp = p;
+  array(string)|string path = ({});
+
+  int len = sizeof(keys);
+
+  for (int i; i < len; i++) {
+    if (is_ref_array(p)) {
+      error("Badly nested table array\n");
+    }
+
+    Token k = keys[i];
+    tmp = p[k->value];
+    path += ({ k->value });
+
+    if (!tmp) {
+      tmp = p[k->value] = (i == len - 1) ? RefArray() : ([]);
+    }
+
+    p = tmp;
+  }
+
+  if (!is_ref_array(p)) {
+    error("mkarray expexted an array but got %O\n", p);
+  }
+
+  path = path * ".";
+  defined_paths[path] = true;
+
+  return p;
+}
 
 protected TokenArray read_keys(Lexer lexer) {
   TokenArray out = ({});
@@ -292,5 +332,55 @@ protected void expect_one_of(Token t, multiset(Kind.Type) kinds) {
       String.implode_nicely(map((array)kinds, .Token.kind_to_string), "or"),
       t->kind_to_string()
     );
+  }
+}
+
+protected bool is_ref_array(mixed o) {
+  return objectp(o) && object_program(o) == RefArray;
+}
+
+protected class RefArray {
+  protected array data = ({});
+
+  public mixed `+(array value) {
+    data += value;
+    return this;
+  }
+
+  public mixed `[](int idx) {
+    if (has_index(data, idx)) {
+      return data[idx];
+    }
+
+    error("Array out of index %O\n", idx);
+  }
+
+  protected array(int) _indices() {
+    return indices(data);
+  }
+
+  protected array(mixed) _values() {
+    return values(data);
+  }
+
+  protected mixed cast(string how) {
+    switch (how) {
+      case "array":
+        return data;
+
+      case "int":
+        return sizeof(data);
+    }
+
+    error("Cant cast %O to %O\n", object_program(this), how);
+  }
+
+  protected int _sizeof() {
+    return sizeof(data);
+  }
+
+  protected string _sprintf() {
+    return sprintf("%O(%O)", object_program(this), data);
+    // return sprintf("%O", (array)this);
   }
 }

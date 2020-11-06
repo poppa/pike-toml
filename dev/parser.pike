@@ -7,12 +7,13 @@
 int main() {
   TOML.Parser parser = TOML.Parser();
 
-  // START_TIMER();
+  START_TIMER();
 
-  parser->parse_file(combine_path(__DIR__, "simple1.toml"));
+  mapping res = parser->parse_file(combine_path(__DIR__, "Cargo.toml"));
+  werror("Res: %O\n", res);
 
 
-  // werror("\nTook: %O\n", GET_TIME());
+  werror("\nTook: %O\n", GET_TIME());
 
   // werror("All tokens: %O\n", toks);
 }
