@@ -1,19 +1,13 @@
-// Run with: pike -M../Parser.pmod parser.pike
-//       or: pike -M../Parser.pmod -DTOML_PARSER_DEBUG parser.pike
+// Run with: pike -M. parser.pike
 
 #include "timer.h"
 
+import Parser.TOML;
 
 int main() {
-  // TOML.Parser parser = TOML.Parser();
-
   START_TIMER();
-
-  mapping res = Parser.TOML.Parser()->parse_file(combine_path(__DIR__, "simple1.toml"));
+  mapping res = parse_file(combine_path(__DIR__, "simple1.toml"));
+  float t = GET_TIME();
   werror("Res: %O\n", res);
-
-
-  werror("\nTook: %O\n", GET_TIME());
-
-  // werror("All tokens: %O\n", toks);
+  werror("\nTook: %O\n", t);
 }

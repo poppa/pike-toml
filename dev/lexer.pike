@@ -1,22 +1,26 @@
 // Run with: pike -M../Parser.pmod lexer.pike
-//       or: pike -M../Parser.pmod -DTOML_LEXER_DEBUG lexer.pike
 
 #include "timer.h"
+
+import Parser.TOML;
 
 Stdio.File DATA = Stdio.File(combine_path(__DIR__, "Cargo.toml"));
 
 int main() {
-  Parser.TOML.Lexer lexer = Parser.TOML.Lexer(DATA);
-  array(Parser.TOML.Token.Token) toks = ({});
+  Lexer lexer = Lexer(DATA);
+  array(Token.Token) toks = ({});
 
   START_TIMER();
 
-  while (Parser.TOML.Token.Token tok = lexer->lex()) {
-    werror("::::::::: %O\n", tok);
+  while (Token.Token tok = lexer->lex()) {
     toks += ({ tok });
   }
 
-  werror("\nTook: %O\n", GET_TIME());
+  float t = GET_TIME();
 
-  // werror("All tokens: %O\n", toks);
+  foreach (toks, Token.Token t) {
+    werror("::::::::: %O\n", t);
+  }
+
+  werror("\nTook: %O\n", t);
 }
