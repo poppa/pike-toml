@@ -1,29 +1,29 @@
 #charset utf-8
 #pike __REAL_VERSION__
 
-protected typedef RefArray|mapping(string:mixed) Container;
-protected typedef array(Token) TokenArray;
+#define KIND(K) .Token.Kind. ## K
+#define MOD(M) .Token.Modifier. ## M
+#define TOKEN .Token.Token
 
-protected constant Lexer = .Lexer;
-protected constant Token = .Token.Token;
-protected constant Modifier = .Token.Modifier;
-protected constant Kind = .Token.Kind;
+protected typedef RefArray|mapping(string:mixed) Container;
+protected typedef array(TOKEN) TokenArray;
+
 protected multiset(string) defined_paths = (<>);
 
-protected multiset(Kind.Type) expect_as_value = (<
-  Kind.Value,
-  Kind.InlineArrayOpen,
-  Kind.InlineTableOpen,
+protected multiset(KIND(Type)) expect_as_value = (<
+  KIND(Value),
+  KIND(InlineArrayOpen),
+  KIND(InlineTableOpen),
 >);
 
-protected multiset(Kind.Type) expect_as_key = (<
-  Kind.Key,
-  Kind.InlineArrayOpen,
-  Kind.InlineTableOpen,
+protected multiset(KIND(Type)) expect_as_key = (<
+  KIND(Key),
+  KIND(InlineArrayOpen),
+  KIND(InlineTableOpen),
 >);
 
 public mapping parse_file(Stdio.File file) {
-  return this::parse(Lexer(file));
+  return this::parse(.Lexer(file));
 }
 
 public variant mapping parse_file(string path) {
@@ -31,31 +31,31 @@ public variant mapping parse_file(string path) {
     error("Unknown file %q\n", path);
   }
 
-  return this::parse(Lexer(Stdio.File(path, "r")));
+  return this::parse(.Lexer(Stdio.File(path, "r")));
 }
 
 public mapping parse_string(string toml_data) {
-  return this::parse(Lexer(Stdio.FakeFile(toml_data)));
+  return this::parse(.Lexer(Stdio.FakeFile(toml_data)));
 }
 
 private Container current_container;
 private mapping top;
 
-public mapping parse(Lexer lexer) {
+public mapping parse(.Lexer lexer) {
   current_container = ([]);
   top = current_container;
 
-  while (Token t = lexer->lex()) {
+  while (TOKEN t = lexer->lex()) {
     switch (t->kind) {
-      case Kind.Key:
+      case KIND(Key):
         parse_key(t, lexer);
         break;
 
-      case Kind.TableOpen:
+      case KIND(TableOpen):
         parse_table_open(t, lexer);
         break;
 
-      case Kind.TableArrayOpen:
+      case KIND(TableArrayOpen):
         parse_table_array_open(t, lexer);
         break;
     }
@@ -80,22 +80,22 @@ protected void normalize_result() {
   mapit(top);
 }
 
-protected void parse_table_array_open(Token token, Lexer lexer) {
-  expect_kind(token, Kind.TableArrayOpen);
+protected void parse_table_array_open(TOKEN token, .Lexer lexer) {
+  expect_kind(token, KIND(TableArrayOpen));
   TokenArray keys = read_keys(lexer);
   RefArray a = mkarray(top, keys);
-  expect_kind(lexer->lex(), Kind.TableArrayClose);
+  expect_kind(lexer->lex(), KIND(TableArrayClose));
 
   mapping c = ([]);
   Container old_container = current_container;
   current_container = c;
 
-  Token next = lexer->lex();
+  TOKEN next = lexer->lex();
 
   do {
-    expect_one_of(next, (< Kind.Key >));
+    expect_one_of(next, (< KIND(Key) >));
     parse_key(next, lexer);
-    Token peek = lexer->peek_token();
+    TOKEN peek = lexer->peek_token();
 
     if (!peek || !peek->is_key()) {
       break;
@@ -106,37 +106,37 @@ protected void parse_table_array_open(Token token, Lexer lexer) {
   a += ({ c });
 }
 
-protected void parse_table_open(Token token, Lexer lexer) {
-  expect_kind(token, Kind.TableOpen);
+protected void parse_table_open(TOKEN token, .Lexer lexer) {
+  expect_kind(token, KIND(TableOpen));
 
   TokenArray keys = read_keys(lexer);
   mapping m = this::mkmapping(top, keys);
   current_container = m;
 
-  expect_kind(lexer->lex(), Kind.TableClose);
+  expect_kind(lexer->lex(), KIND(TableClose));
 }
 
-protected void parse_key(Token token, Lexer lexer) {
+protected void parse_key(TOKEN token, .Lexer lexer) {
   if (!mappingp(current_container)) {
     error("Expected current_container to be a mapping\n");
   }
 
-  expect_kind(token, Kind.Key);
-  Token next = lexer->lex();
+  expect_kind(token, KIND(Key));
+  TOKEN next = lexer->lex();
   expect_one_of(next, expect_as_value);
 
   mixed value;
 
   switch (next->kind) {
-    case Kind.InlineArrayOpen:
+    case KIND(InlineArrayOpen):
       value = parse_inline_array(next, lexer);
       break;
 
-    case Kind.InlineTableOpen:
+    case KIND(InlineTableOpen):
       value = parse_inline_table(next, lexer);
       break;
 
-    case Kind.Value:
+    case KIND(Value):
       value = next->pike_value();
       break;
   }
@@ -144,14 +144,14 @@ protected void parse_key(Token token, Lexer lexer) {
   current_container[token->value] = value;
 }
 
-protected mapping(string:mixed) parse_inline_table(Token token, Lexer lexer) {
-  expect_kind(token, Kind.InlineTableOpen);
+protected mapping(string:mixed) parse_inline_table(TOKEN token, .Lexer lexer) {
+  expect_kind(token, KIND(InlineTableOpen));
 
   Container prev_container = current_container;
   mapping value = ([]);
   current_container = value;
 
-  Token next;
+  TOKEN next;
   while (next = lexer->lex()) {
     if (next->is_inline_table_close()) {
       break;
@@ -160,34 +160,34 @@ protected mapping(string:mixed) parse_inline_table(Token token, Lexer lexer) {
     expect_one_of(next, expect_as_key);
 
     switch (next->kind) {
-      case Kind.Key:
+      case KIND(Key):
         parse_key(next, lexer);
         break;
 
-      case Kind.InlineArrayOpen:
+      case KIND(InlineArrayOpen):
         parse_inline_array(next, lexer);
         break;
 
-      case Kind.InlineTableOpen:
+      case KIND(InlineTableOpen):
         parse_inline_table(next, lexer);
         break;
     }
   }
 
-  expect_kind(next, Kind.InlineTableClose);
+  expect_kind(next, KIND(InlineTableClose));
   current_container = prev_container;
 
   return value;
 }
 
-protected RefArray parse_inline_array(Token token, Lexer lexer) {
-  expect_kind(token, Kind.InlineArrayOpen);
+protected RefArray parse_inline_array(TOKEN token, .Lexer lexer) {
+  expect_kind(token, KIND(InlineArrayOpen));
 
   Container prev_container = current_container;
   RefArray values = RefArray();
   current_container = values;
-  Modifier.Type first_type;
-  Token next;
+  .Token.Modifier.Type first_type;
+  TOKEN next;
 
   while (next = lexer->lex()) {
     if (next->is_inline_array_close()) {
@@ -212,15 +212,14 @@ protected RefArray parse_inline_array(Token token, Lexer lexer) {
 
     if (!first_type) {
       first_type = next->is_string_value()
-        ? .Token.Modifier.String
-        :  next->modifier;
+        ? MOD(String)
+        : next->modifier;
     } else {
       if (!.Token.has_modifier(next, first_type)) {
         error(
           "Array values must be of the same type. "
           "Array is typed as %O, got value of type %O\n",
           .Token.modifier_to_string(first_type),
-          // .Token.modifier_to_string(next->modifier)
           next->modifier_to_string()
         );
       }
@@ -229,7 +228,7 @@ protected RefArray parse_inline_array(Token token, Lexer lexer) {
     values += ({ next->pike_value() });
   }
 
-  expect_kind(next, Kind.InlineArrayClose);
+  expect_kind(next, KIND(InlineArrayClose));
   current_container = prev_container;
 
   return values;
@@ -240,7 +239,7 @@ protected mapping mkmapping(mapping old, TokenArray keys) {
   mapping tmp = ([]);
   array(string)|string path = ({});
 
-  foreach (keys, Token t) {
+  foreach (keys, TOKEN t) {
     tmp = p[t->value];
     path += ({ t->value });
 
@@ -274,7 +273,7 @@ protected RefArray mkarray(mapping old, TokenArray keys) {
       error("Badly nested table array\n");
     }
 
-    Token k = keys[i];
+    TOKEN k = keys[i];
     tmp = p[k->value];
     path += ({ k->value });
 
@@ -295,10 +294,10 @@ protected RefArray mkarray(mapping old, TokenArray keys) {
   return p;
 }
 
-protected TokenArray read_keys(Lexer lexer) {
+protected TokenArray read_keys(.Lexer lexer) {
   TokenArray out = ({});
 
-  while (Token t = lexer->lex()) {
+  while (TOKEN t = lexer->lex()) {
     out += ({ t });
 
     if (!lexer->peek_token()->is_key()) {
@@ -309,13 +308,13 @@ protected TokenArray read_keys(Lexer lexer) {
   return out;
 }
 
-protected void expect_value(Token t) {
+protected void expect_value(TOKEN t) {
   if (!t->is_value()) {
     error("Expected a value token, got %O\n", t->kind_to_string());
   }
 }
 
-protected void expect_kind(Token t, Kind.Type kind) {
+protected void expect_kind(TOKEN t, int /*.Token.Kind.Type*/ kind) {
   if (!t->is_kind(kind)) {
     error(
       "Expected kind %O, got %O\n",
@@ -325,7 +324,10 @@ protected void expect_kind(Token t, Kind.Type kind) {
   }
 }
 
-protected void expect_one_of(Token t, multiset(Kind.Type) kinds) {
+protected void expect_one_of(
+  TOKEN t,
+  multiset(int /*.Token.Kind.Type*/) kinds
+) {
   if (!kinds[t->kind]) {
     error(
       "Expected kind of %q, got %O\n",

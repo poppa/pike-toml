@@ -34,9 +34,9 @@
     }                                             \
   } while (0)
 
-private constant Token = .Token.Token;
-private constant Kind = .Token.Kind;
-private constant Modifier = .Token.Modifier;
+#define KIND(K) .Token.Kind. ## K
+#define MOD(M) .Token.Modifier. ## M
+#define TOKEN .Token.Token
 
 protected enum LexState {
   STATE_NONE,
@@ -106,8 +106,8 @@ protected void create(Stdio.File | string input) {
   this::input = input;
 }
 
-public Token peek_token() {
-  Token t = lex();
+public TOKEN peek_token() {
+  TOKEN t = lex();
   peek_queue->put(t);
   return t;
 }
@@ -143,13 +143,13 @@ public mixed lex() {
     case "}": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(Kind.InlineTableClose, "}");
+      return TOKEN(KIND(InlineTableClose), "}");
     } break;
 
     case "]": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return Token(Kind.InlineArrayClose, "]");
+      return TOKEN(KIND(InlineArrayClose), "]");
     } break;
 
     case ",": {
@@ -165,7 +165,7 @@ public mixed lex() {
 
         return lex_std_table();
       } else if (IS_STATE_VALUE()) {
-        Token tok = lex_value();
+        TOKEN tok = lex_value();
         return tok;
       }
     }
@@ -173,10 +173,10 @@ public mixed lex() {
     // It must be a key/value
     default: {
       if (IS_STATE_KEY()) {
-        Token tok = lex_key();
+        TOKEN tok = lex_key();
         return tok;
       } else if (IS_STATE_VALUE()) {
-        Token tok = lex_value();
+        TOKEN tok = lex_value();
 
         if (current) {
           push_back();
@@ -206,8 +206,8 @@ protected string advance() {
   return current = UNDEFINED;
 }
 
-protected Token lex_key() {
-  Token key = lex_key_low();
+protected TOKEN lex_key() {
+  TOKEN key = lex_key_low();
   eat_whitespace();
   // FIXME: Same as in lex_inline_table()
   expect("=", true);
@@ -217,7 +217,7 @@ protected Token lex_key() {
   return key;
 }
 
-protected Token lex_value() {
+protected TOKEN lex_value() {
   switch (current[0]) {
     //
     // [    Array start
@@ -238,13 +238,13 @@ protected Token lex_value() {
         string value = read_multiline_quoted_string();
         return value_token(
           value,
-          Modifier.String | Modifier.Quoted | Modifier.Multiline
+          MOD(String) | MOD(Quoted) | MOD(Multiline)
         );
       }
 
       string value = read_quoted_string();
 
-      return value_token(value, Modifier.String | Modifier.Quoted);
+      return value_token(value, MOD(String) | MOD(Quoted));
     } break;
 
     //
@@ -254,12 +254,12 @@ protected Token lex_value() {
         string value = read_multiline_literal_string();
         return value_token(
           value,
-          Modifier.String | Modifier.Literal | Modifier.Multiline
+          MOD(String) | MOD(Literal) | MOD(Multiline)
         );
       }
 
       string value = read_litteral_string();
-      return value_token(value, Modifier.String | Modifier.Literal);
+      return value_token(value, MOD(String) | MOD(Literal));
     } break;
 
     //
@@ -278,10 +278,10 @@ protected Token lex_value() {
   exit(1, "Lex value\n");
 }
 
-protected Token lex_inline_table() {
+protected TOKEN lex_inline_table() {
   expect("{", true);
 
-  Token tok_ret = Token(Kind.InlineTableOpen, "{");
+  TOKEN tok_ret = TOKEN(KIND(InlineTableOpen), "{");
   SET_STATE_KEY();
   ctx_stack->push(CTX_TABLE);
 
@@ -292,17 +292,17 @@ protected Token lex_inline_table() {
   return tok_ret;
 }
 
-protected Token lex_array_value() {
+protected TOKEN lex_array_value() {
   expect("[", true);
 
-  Token ret = Token(Kind.InlineArrayOpen, "[");
+  TOKEN ret = TOKEN(KIND(InlineArrayOpen), "[");
   SET_STATE_VALUE();
   ctx_stack->push(CTX_ARRAY);
 
   return ret;
 }
 
-protected Token lex_literal_value() {
+protected TOKEN lex_literal_value() {
   // FIXME: Verfiy there are no more stop characters
   string data = read_until((< ",", "\n", " ", "\t", "\v", "#", "]", "}" >));
 
@@ -311,72 +311,72 @@ protected Token lex_literal_value() {
   }
 
   if (data == "false" || data == "true") {
-    return value_token(data, Modifier.Boolean);
+    return value_token(data, MOD(Boolean));
   } else if (re_int->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Int);
+    return value_token(data, MOD(Number) | MOD(Int));
   } else if (re_float->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Float);
+    return value_token(data, MOD(Number) | MOD(Float));
   } else if (re_exp->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Exp);
+    return value_token(data, MOD(Number) | MOD(Exp));
   } else if (re_hex->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Hex);
+    return value_token(data, MOD(Number) | MOD(Hex));
   } else if (re_oct->match(data)) {
-    return value_token(replace(data, "o", ""), Modifier.Number | Modifier.Oct);
+    return value_token(replace(data, "o", ""), MOD(Number) | MOD(Oct));
   } else if (re_bin->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Bin);
+    return value_token(data, MOD(Number) | MOD(Bin));
   } else if (re_inf->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Inf);
+    return value_token(data, MOD(Number) | MOD(Inf));
   } else if (re_nan->match(data)) {
-    return value_token(data, Modifier.Number | Modifier.Nan);
+    return value_token(data, MOD(Number) | MOD(Nan));
   } else if (re_local_time->match(data)) {
-    return value_token(data, Modifier.Date | Modifier.Time);
+    return value_token(data, MOD(Date) | MOD(Time));
   } else if (re_full_date->match(data)) {
-    return value_token(data, Modifier.Date);
+    return value_token(data, MOD(Date));
   } else if (re_local_date_time->match(data)) {
-    return value_token(data, Modifier.Date | Modifier.Time);
+    return value_token(data, MOD(Date) | MOD(Time));
   } else if (re_offset_date_time->match(data)) {
-    return value_token(data, Modifier.Date | Modifier.Time);
+    return value_token(data, MOD(Date) | MOD(Time));
   }
 
   error("Unhandled value: %O\n", data);
 }
 
-protected Token lex_std_array() {
+protected TOKEN lex_std_array() {
   expect("[");
   expect("[");
 
-  Token tok_open = Token(Kind.TableArrayOpen, "[[");
+  TOKEN tok_open = TOKEN(KIND(TableArrayOpen), "[[");
   lex_std_key();
   expect("]");
   expect("]", true);
 
-  token_queue->put(Token(Kind.TableArrayClose, "]]"));
+  token_queue->put(TOKEN(KIND(TableArrayClose), "]]"));
 
   return tok_open;
 }
 
-protected Token lex_std_table() {
+protected TOKEN lex_std_table() {
   expect("[");
-  Token tok_open = Token(Kind.TableOpen, "[");
+  TOKEN tok_open = TOKEN(KIND(TableOpen), "[");
   lex_std_key();
   expect("]", false);
 
-  token_queue->put(Token(Kind.TableClose, "]"));
+  token_queue->put(TOKEN(KIND(TableClose), "]"));
 
   return tok_open;
 }
 
 protected void lex_std_key() {
   eat_whitespace();
-  Token key = lex_key_low();
+  TOKEN key = lex_key_low();
   token_queue->put(key);
 
   if (current == ".") {
-    key->modifier = Modifier.Dotted;
+    key->modifier = MOD(Dotted);
 
     while (current == ".") {
       advance();
-      Token lt = lex_key_low();
+      TOKEN lt = lex_key_low();
       lt->modifier = key->modifier;
       token_queue->put(lt);
     }
@@ -385,20 +385,20 @@ protected void lex_std_key() {
   eat_whitespace();
 }
 
-protected Token lex_key_low() {
-  Modifier.Type modifier;
+protected TOKEN lex_key_low() {
+  .Token.Modifier.Type modifier;
   string value;
 
   eat_whitespace();
 
   switch (current[0]) {
     case '"':
-      modifier = Modifier.String | Modifier.Quoted;
+      modifier = MOD(String) | MOD(Quoted);
       value = read_quoted_string();
       break;
 
     case '\'':
-      modifier = Modifier.String | Modifier.Literal;
+      modifier = MOD(String) | MOD(Literal);
       value = read_litteral_string();
       break;
 
@@ -412,7 +412,7 @@ protected Token lex_key_low() {
 
   eat_whitespace();
 
-  return Token(Kind.Key, value, modifier);
+  return TOKEN(KIND(Key), value, modifier);
 }
 
 protected string read_unquoted_key() {
@@ -694,9 +694,9 @@ protected string peek(int(0..) | void n) {
   return v;
 }
 
-protected Token value_token(
+protected TOKEN value_token(
   string value,
-  Modifier.Type|void modifier
+  /*.Token.Modifier.Type*/ int|void modifier
 ) {
-  return Token(Kind.Value, value, modifier);
+  return TOKEN(KIND(Value), value, modifier);
 }
