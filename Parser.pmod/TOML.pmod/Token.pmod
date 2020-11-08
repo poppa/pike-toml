@@ -152,6 +152,27 @@ private function _kind_to_string = kind_to_string;
 private function _modifier_to_string = modifier_to_string;
 private function _is_string_value = is_string_value;
 
+private string re_ymd_s = "\\d{4}-\\d{2}-\\d{2}";
+private string re_hms_s = "\\d{2}:\\d{2}:\\d{2}";
+private string re_frac_s = "\\.\\d+";
+private string re_tz_s = "([Zz]|[-+]\\d{2}:\\d{2})";
+
+#define RE Regexp.PCRE.Widestring
+
+private RE re_ymds_frac_tz =
+  RE("^" + re_ymd_s + "[Tt ]" + re_hms_s + re_frac_s + re_tz_s + "$");
+private RE re_ymds_frac =
+  RE("^" + re_ymd_s + "[Tt ]" + re_hms_s + re_frac_s + "$");
+private RE re_ymds_tz =
+  RE("^" + re_ymd_s + "[Tt ]" + re_hms_s + re_tz_s + "$");
+private RE re_ymds =
+  RE("^" + re_ymd_s + "[Tt ]" + re_hms_s + "$");
+
+private RE re_time_frac_tz = RE("^" + re_hms_s + re_frac_s + re_tz_s + "$");
+private RE re_time_frac = RE("^" + re_hms_s + re_frac_s + "$");
+private RE re_time_tz = RE("^" + re_hms_s + re_tz_s + "$");
+private RE re_time = RE("^" + re_hms_s + "$");
+
 class Token {
   public Kind.Type kind;
   public string value;
@@ -303,10 +324,57 @@ class Token {
 
   protected object(Calendar.Time)|object(Calendar.ISO) render_date() {
     if (is_modifier(Modifier.Time)) {
-      return Calendar.dwim_time(value);
+      string fmt = get_calendar_parse_string();
+      Calendar.Second ret;
+
+      if (mixed err = catch(ret = Calendar.parse(fmt, value))) {
+        error(
+          "Failed to convert time %q to time object: %s\n",
+          value,
+          describe_error(err)
+        );
+      }
+
+      return ret;
     } else {
       return Calendar.dwim_day(value);
     }
+  }
+
+  protected string get_calendar_parse_string() {
+    if (re_ymds_frac_tz->match(value)) {
+      return "%Y-%M-%D%[T ]%h:%m:%s.%f%z";
+    }
+
+    if (re_ymds_frac->match(value)) {
+      return "%Y-%M-%D%[T ]%h:%m:%s.%f";
+    }
+
+    if (re_ymds_tz->match(value)) {
+      return "%Y-%M-%D%[T ]%h:%m:%s%z";
+    }
+
+    if (re_ymds->match(value)) {
+      return "%Y-%M-%D%[T ]%h:%m:%s";
+    }
+
+    if (re_time_frac_tz->match(value)) {
+      return "%h:%m:%s.%f%z";
+    }
+
+    if (re_time_frac->match(value)) {
+      return "%h:%m:%s.%f";
+    }
+
+    if (re_time_tz->match(value)) {
+      return "%h:%m:%s%z";
+    }
+
+    if (re_time->match(value)) {
+      return "%h:%m:%s";
+    }
+
+    error("Unknown date format %O\n", value);
   }
 
   protected string _sprintf(int t) {
