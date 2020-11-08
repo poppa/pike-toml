@@ -67,14 +67,34 @@ public mapping parse(.Lexer lexer) {
 }
 
 protected void normalize_result() {
-  void mapit(mapping m) {
+  function arrayit, mapit;
+
+  arrayit = lambda(array|RefArray a) {
+    if (is_ref_array(a)) {
+      return arrayit((array)a);
+    } else {
+      return map(a, lambda (mixed v) {
+        if (mappingp(v)) {
+          return mapit(v);
+        } else if (arrayp(v) || is_ref_array(v)) {
+          return arrayit(v);
+        } else {
+          return v;
+        }
+      });
+    }
+  };
+
+  mapit = lambda(mapping m) {
     foreach (m; string key; mixed val) {
-      if (is_ref_array(val)) {
-        m[key] = (array)val;
+      if (arrayp(val) || is_ref_array(val)) {
+        m[key] = arrayit(val);
       } else if (mappingp(val)) {
         this_function(val);
       }
     }
+
+    return m;
   };
 
   mapit(top);
@@ -141,7 +161,7 @@ protected void parse_key(TOKEN token, .Lexer lexer) {
       break;
   }
 
-  current_container[token->value] = value;
+  current_container[token->pike_value()] = value;
 }
 
 protected mapping(string:mixed) parse_inline_table(TOKEN token, .Lexer lexer) {
@@ -241,10 +261,10 @@ protected mapping mkmapping(mapping old, TokenArray keys) {
 
   foreach (keys, TOKEN t) {
     tmp = p[t->value];
-    path += ({ t->value });
+    path += ({ t->pike_value() });
 
     if (!tmp) {
-      tmp = p[t->value] = ([]);
+      tmp = p[t->pike_value()] = ([]);
     }
 
     p = tmp;
