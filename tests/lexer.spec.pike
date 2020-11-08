@@ -2,10 +2,12 @@
 import Pest;
 import Parser.TOML;
 
+#include "helpers.h"
+
 int main() {
   describe("Basic Lexer", lambda () {
     test("Expect Lexer to take a File object as input", lambda () {
-      Stdio.File file = Stdio.File(combine_path(__DIR__, "simple.toml"));
+      Stdio.File file = Stdio.File(toml_file("simple.toml"));
       mixed err = catch (Lexer lexer = Lexer(file));
       expect(err)->to_equal(UNDEFINED);
       Token.Token t = lexer->lex();

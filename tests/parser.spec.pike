@@ -2,6 +2,8 @@
 import Pest;
 import Parser.TOML;
 
+#include "helpers.h"
+
 int main() {
   describe("Parser init tests", lambda () {
     test(
@@ -9,7 +11,7 @@ int main() {
       lambda () {
         Parser p = Parser();
         mapping res = p->parse_file(
-          Stdio.File(combine_path(__DIR__, "simple.toml"))
+          Stdio.File(toml_file("simple.toml"))
         );
 
         expect(res["string-key"])->to_equal("string");
@@ -20,7 +22,7 @@ int main() {
       "Parser->parse_file() should handle path to a file as argument",
       lambda () {
         Parser p = Parser();
-        mapping res = p->parse_file(combine_path(__DIR__, "simple.toml"));
+        mapping res = p->parse_file(toml_file("simple.toml"));
         expect(res["string-key"])->to_equal("string");
       }
     );

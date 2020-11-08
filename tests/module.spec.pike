@@ -2,16 +2,18 @@
 import Pest;
 import Parser.TOML;
 
+#include "helpers.h"
+
 int main() {
-  describe("Parser tests", lambda () {
+  describe("Root module tests", lambda () {
     test("TOML.parse_file() should handle a Stdio.File object", lambda () {
-      Stdio.File f = Stdio.File(combine_path(__DIR__, "simple.toml"), "r");
+      Stdio.File f = Stdio.File(toml_file("simple.toml"), "r");
       mapping res = parse_file(f);
       expect(res["string-key"])->to_equal("string");
     });
 
     test("TOML.parse_file() should handle a path to a file", lambda () {
-      mapping res = parse_file(combine_path(__DIR__, "simple.toml"));
+      mapping res = parse_file(toml_file("simple.toml"));
       expect(res["string-key"])->to_equal("string");
     });
 

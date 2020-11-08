@@ -1,0 +1,20 @@
+# From https://toml.io/en/
+
+str1 = """
+Roses are red
+Violets are blue"""
+
+str2 = "The quick brown fox jumps over the lazy dog."
+
+str3 = """
+The quick brown \
+
+
+  fox jumps over \
+    the lazy dog."""
+
+str4 = """\
+       The quick brown \
+       fox jumps over \
+       the lazy dog.\
+       """
