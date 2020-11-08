@@ -266,7 +266,7 @@ class Token {
     | bool pike_value()
   {
     if (!is_value()) {
-      return value;
+      return utf8_to_string(value);
     }
 
     if (is_modifier(Modifier.Number)) {
