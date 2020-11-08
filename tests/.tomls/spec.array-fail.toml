@@ -1,0 +1,3 @@
+# From https://toml.io/en/
+
+arr6 = [ 1, 2.0 ] # INVALID

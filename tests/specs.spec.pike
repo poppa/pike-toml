@@ -1,3 +1,5 @@
+#charset utf8
+
 // https://github.com/poppa/pest
 import Pest;
 import Parser.TOML;
@@ -101,16 +103,6 @@ int main() {
       "Expect basic floating point numbers to be handled correctly",
       lambda () {
         mapping res = parse_file(toml_file("spec.float.toml"));
-        /*
-          "flt1": 1.0,
-          "flt2": 3.1415,
-          "flt3": -0.01,
-          "flt4": 5e+22,
-          "flt5": 1000000.0,
-          "flt6": -0.02,
-          "flt7": 6.626e-34,
-          "flt8": 9224617.44599123
-        */
 
         expect(res->flt1)->to_equal(1.0);
         expect(res->flt2)->to_equal(3.1415);
@@ -161,11 +153,78 @@ int main() {
 
       expect(object_program(res->odt1))->to_be(Calendar.Second);
       expect(object_program(res->odt2))->to_be(Calendar.Second);
-      expect(object_program(res->odt3))->to_be(Calendar.Second);
+      expect(object_program(res->odt3))->to_be(Calendar.Fraction);
 
       expect(res->odt1->format_xtime())->to_equal("1979-05-27 07:32:00.000000");
       expect(res->odt2->format_xtime())->to_equal("1979-05-27 00:32:00.000000");
-      expect(res->odt3->format_xtime())->to_equal("1979-05-27 00:32:00.000000");
+      expect(res->odt3->format_xtime())->to_equal("1979-05-27 00:32:00.999999");
+    });
+  });
+
+  describe("Test local datetime from https://toml.io/", lambda () {
+    test("Expect local datetime to be handled correctly", lambda() {
+      mapping res = parse_file(toml_file("spec.local-datetime.toml"));
+
+
+      expect(object_program(res->ld1))->to_be(Calendar.Day);
+      expect(object_program(res->ldt1))->to_be(Calendar.Second);
+      expect(object_program(res->ldt2))->to_be(Calendar.Fraction);
+      expect(object_program(res->lt1))->to_be(Calendar.Second);
+      expect(object_program(res->lt2))->to_be(Calendar.Fraction);
+
+      expect(res->ld1->format_ymd())->to_equal("1979-05-27");
+      expect(res->ldt1->format_xtime())->to_equal("1979-05-27 07:32:00.000000");
+      expect(res->ldt2->format_xtime())->to_equal("1979-05-27 00:32:00.999999");
+    });
+  });
+
+  describe("Test arrays from https://toml.io/", lambda () {
+    test("Expect inline arrays to be handled correctly", lambda() {
+      mapping res = parse_file(toml_file("spec.array.toml"));
+
+      expect(res->arr1)->to_equal(({ 1, 2, 3 }));
+      expect(res->arr2)->to_equal(({ "red", "yellow", "green" }));
+      expect(res->arr3)->to_equal(({ ({ 1, 2 }), ({ 3, 4, 5 }) }));
+      expect(res->arr4)->to_equal(({
+        "all",
+        "strings",
+        "are the same",
+        "type"
+      }));
+      expect(res->arr5)->to_equal(({ ({ 1, 2 }), ({ "a", "b", "c" }) }));
+      expect(res->arr7)->to_equal(({ 1, 2, 3 }));
+      expect(res->arr8)->to_equal(({ 1, 2 }));
+    });
+
+    test("Expect array with mixed types to throw an error", lambda () {
+      mixed err = catch {
+        mapping res = parse_file(toml_file("spec.array-fail.toml"));
+      };
+
+      expect(!err)->to_equal(false);
+    });
+  });
+
+  describe("Test tables from https://toml.io/", lambda () {
+    test("Expect standard tables to be handled correctly", lambda() {
+      mapping res = parse_file(toml_file("spec.table.toml"));
+
+      expect(res->empty)->to_equal(([]));
+
+      expect(res["table-1"])->to_equal(([
+        "key1": "some string",
+        "key2": 123,
+      ]));
+
+      expect(res["table-2"])->to_equal(([
+        "key1": "another string",
+        "key2": 456,
+      ]));
+
+      expect(res->a->b->c)->to_equal(([]));
+      expect(res->d->e->f)->to_equal(([]));
+      expect(res->g->h->i)->to_equal(([]));
+      expect(res->j->ʞ->l)->to_equal(([]));
     });
   });
 }

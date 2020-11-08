@@ -64,8 +64,8 @@ int main() {
 
         expect(tok("2020-11-03", MOD(Date)))
           ->to_equal(Calendar.dwim_day("2020-11-03"));
-        expect(tok("2020-11-03T22:44:00.000+01:00", MOD(Date)|MOD(Time)))
-          ->to_equal(Calendar.dwim_time("2020-11-03T22:44:00.000+01:00"));
+        expect(tok("2020-11-03T22:44:00+02:00", MOD(Date)|MOD(Time)))
+          ->to_equal(Calendar.dwim_time("2020-11-03T22:44:00+02:00"));
         expect(tok("11:11:11", MOD(Date)|MOD(Time)))
           ->to_equal(Calendar.dwim_time("11:11:11"));
 
