@@ -79,13 +79,36 @@
 # [table]
 # key = 3
 
-[top]
-always = "yes"
+# [top]
+# always = "yes"
 
-[[top.array]]
-key = 1
-key2 = { key = "one", val = 1 }
+# [[top.array]]
+# key = 1
+# key2 = { key = "one", val = 1 }
 
-[[top.array]]
-key = 1
-key2 = { key = "two", val = 2 }
+# [[top.array]]
+# key = 1
+# key2 = { key = "two", val = 2 }
+
+# str = "Name\tJos\u00E9\nLoc\t\"SF\"\f."
+
+# str = """\
+# The quick brown \
+
+
+#   fox jumps over \
+#     the lazy dog."""
+
+# str4 = """\
+#        The quick brown \
+#        fox jumps over \
+#        the lazy \t dog.\
+#        """
+
+regex2 = '''I [dw]on't need \d{2} apples'''
+lines  = '''
+The first newline is
+trimmed in raw strings.
+   All other whitespace
+   is preserved.
+'''
