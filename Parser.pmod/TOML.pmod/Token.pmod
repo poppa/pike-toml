@@ -255,7 +255,7 @@ class Token {
     } else if (is_modifier(Modifier.Boolean)) {
       return value == "true";
     } else {
-      return value;
+      return string_to_utf8(value);
     }
   }
 
@@ -264,7 +264,12 @@ class Token {
       return (int)value;
     }
 
-    if (is_modifier(Modifier.Float) || is_modifier(Modifier.Exp)) {
+    if (is_modifier(Modifier.Exp)) {
+      // FIXME: Do we need to use Gmp.mpf() here in some cases?
+      return (float)value;
+    }
+
+    if (is_modifier(Modifier.Float)) {
       return (float)value;
     }
 
@@ -278,10 +283,18 @@ class Token {
     }
 
     if (is_modifier(Modifier.Inf)) {
+      if (value == "-inf") {
+        return -Int.inf;
+      }
+
       return Int.inf;
     }
 
     if (is_modifier(Modifier.Nan)) {
+      if (value == "-nan") {
+        return -Math.nan;
+      }
+
       return Math.nan;
     }
 
