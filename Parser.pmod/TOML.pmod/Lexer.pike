@@ -13,10 +13,78 @@
   case '_':                  \
   case 'a'..'z'
 
+// "    quotation mark     U+0022
+// \    reverse solidus    U+005C
+// /    solidus            U+002F
+// b    backspace          U+0008
+// f    form feed          U+000C
+// n    line feed          U+000A
+// r    carriage return    U+000
+// t    tab                U+0009
+// u    uXXXX              U+XXXX
+// U    UXXXXXXXX          U+XXXXXXXX
+#define CASE_ESCAPE_CHARS_SEQ \
+  case 0x22:                  \
+  case 0x5C:                  \
+  case 0x2F:                  \
+  case 0x62:                  \
+  case 0x66:                  \
+  case 0x6E:                  \
+  case 0x72:                  \
+  case 0x74:                  \
+  case 0x75:                  \
+  case 0x55
+
+#define CASE_UNICODE_ESCAPE   \
+  case 0x55:                  \
+  case 0x75
+
+#define CASE_NON_ASCII        \
+    case 0x80..0xD7FF:        \
+    case 0xE000..0x10FFFF
+
 #define SET_STATE_KEY() lex_state = STATE_KEY
 #define SET_STATE_VALUE() lex_state = STATE_VALUE
 #define IS_STATE_KEY() lex_state == STATE_KEY
 #define IS_STATE_VALUE() lex_state == STATE_VALUE
+#define QUOTE_CHAR "\""
+#define ESC_CHAR "\\"
+
+#define DECODE_ESC_IN_STRING()                                                 \
+  if (current == ESC_CHAR) {                                                   \
+    string next = peek();                                                      \
+                                                                               \
+    if (!is_escape_char(next)) {                                               \
+      error("Illegal escape sequence: %O\n", next);                            \
+    }                                                                          \
+                                                                               \
+    if (is_unicode_escape(next)) {                                             \
+      advance();                                                               \
+      advance();                                                               \
+                                                                               \
+      string s = "0x" + (next == "u" ? read_n_chars(3) : read_n_chars(7));     \
+      sscanf(s, "%x", int ch);                                                 \
+                                                                               \
+      if (!Unicode.is_wordchar(ch)) {                                          \
+        error("Invalid unicode character \"%c\"\n", ch);                       \
+      }                                                                        \
+                                                                               \
+      buf->putchar(ch);                                                        \
+                                                                               \
+      continue;                                                                \
+    }                                                                          \
+                                                                               \
+    int|string c = escape_char_to_literal(next[0]);                            \
+                                                                               \
+    if (intp(c)) {                                                             \
+      buf->putchar(c);                                                         \
+    } else {                                                                   \
+      push(c);                                                                 \
+    }                                                                          \
+                                                                               \
+    advance();                                                                 \
+    continue;                                                                  \
+  }
 
 #define POP_CTX_STACK()         \
   do {                          \
@@ -27,10 +95,10 @@
 
 #define EAT_COMMENT()                             \
   do {                                            \
-    eat_whitespace_and_nl();                      \
+    eat_whitespace_and_newline();                 \
     while (current == "#") {                      \
       lex_comment();                              \
-      eat_whitespace_and_nl();                    \
+      eat_whitespace_and_newline();               \
     }                                             \
   } while (0)
 
@@ -62,6 +130,7 @@ protected LexState lex_state = STATE_KEY;
 
 // Regexp strings
 protected string float_p = "[-+]?(0\\.|[1-9][0-9]*\\.)[0-9]+";
+protected string int_p = "(0|[1-9][0-9]*)";
 protected string full_date
   = "(\\d{4})" + "-" // year
   + "(0[1-9]|1[0-2])" + "-" // month
@@ -79,14 +148,14 @@ protected string local_date_time
   + partial_time;
 protected string offset_date_time
   = local_date_time
-  + "[+-]"
+  + "(Z|[+-]"
   + time_hour + ":"
-  + time_minute;
+  + time_minute + ")";
 
 // Regexps
-protected REGEX re_int = REGEX("^[-+]?(0|[1-9][0-9]*)$");
+protected REGEX re_int = REGEX("^[-+]?" + int_p + "$");
 protected REGEX re_float = REGEX("^[-+]?" + float_p + "$");
-protected REGEX re_exp = REGEX("^[-+]?" + float_p + "[eE]-?[0-9]+");
+protected REGEX re_exp = REGEX("^[-+]?(" + int_p + "|" + float_p + ")[eE][-+]?[0-9]+");
 protected REGEX re_hex = REGEX("^[-+]?0x[0-9A-F]+$", RegexpOption.CASELESS);
 protected REGEX re_oct = REGEX("^[-+]?0o[0-7]+$");
 protected REGEX re_bin = REGEX("^[-+]?0b[0-1]+$");
@@ -234,7 +303,7 @@ protected TOKEN lex_value() {
     //
     // "    Quotation mark
     case 0x22: {
-      if (peek(2) == "\"\"") {
+      if (peek(2) == QUOTE_CHAR + QUOTE_CHAR) {
         string value = read_multiline_quoted_string();
         return value_token(
           value,
@@ -464,58 +533,112 @@ protected string read_quoted_string() {
   String.Buffer buf = String.Buffer();
   function push = buf->add;
 
-  do {
-    advance();
-
+  while (advance()) {
     if (!current) {
       error("Unterminated string literal\n");
     }
 
-    if (current == "\\") {
-      do {
-        string v = read_escape_chars();
-        push(v);
-      } while(current == "\\");
+    if (current == QUOTE_CHAR) {
+      break;
     }
 
+    DECODE_ESC_IN_STRING();
+
     switch (current[0]) {
+      case 0x09..0x0D:
       case 0x20..0x21:
       case 0x23..0x5B:
       case 0x5D..0x7E:
-      case 0x80..0x10FFFF:
+      CASE_NON_ASCII:
         push(current);
         break;
+      default:
+        error("Unhandled character %O\n", current);
     }
-  } while (current != "\"");
+  }
 
   expect("\"");
 
   return (string)buf;
 }
 
+protected bool is_escape_char(string|int c) {
+  if (stringp(c)) {
+    c = c[0];
+  }
+
+  switch (c) {
+    CASE_ESCAPE_CHARS_SEQ:
+      return true;
+    default:
+      return false;
+  }
+}
+
+protected int|string escape_char_to_literal(int c) {
+  switch (c) {
+    case '\\': return ESC_CHAR;
+    case '"':  return "\"";
+    case 'b':  return '\b';
+    case 'f':  return '\f';
+    case 'n':  return '\n';
+    case 'r':  return '\r';
+    case 't':  return '\t';
+    default: error("Unhandled escape character: %c\n", c);
+  }
+}
+
+protected bool is_unicode_escape(string|int c) {
+  if (stringp(c)) {
+    c = c[0];
+  }
+
+  switch (c) {
+    CASE_UNICODE_ESCAPE:
+      return true;
+
+    default:
+      return false;
+  }
+}
+
 // FIXME: Adhere to ABNF
 protected string read_multiline_quoted_string() {
-  expect("\"");
-  expect("\"");
-  expect("\"");
+  expect(QUOTE_CHAR);
+  expect(QUOTE_CHAR);
+  expect(QUOTE_CHAR);
 
   String.Buffer buf = String.Buffer();
   function push = buf->add;
 
-  while (current) {
-    if (current == "\"" && peek(2) == "\"\"") {
+  eat_current_newline();
+  push_back();
+
+  while (advance()) {
+    eat_extraneous_whitespace();
+
+    if (current == QUOTE_CHAR && peek(2) == QUOTE_CHAR + QUOTE_CHAR) {
       break;
     }
 
+    DECODE_ESC_IN_STRING();
+
     push(current);
-    advance();
   }
 
-  expect("\"");
-  expect("\"");
-  expect("\"");
+  expect(QUOTE_CHAR);
+  expect(QUOTE_CHAR);
+  expect(QUOTE_CHAR);
 
   return (string)buf;
+}
+
+protected void eat_extraneous_whitespace() {
+  if (current == ESC_CHAR && peek() == "\n") {
+    advance();
+    eat_whitespace_and_newline();
+    eat_extraneous_whitespace();
+  }
 }
 
 // FIXME: Adhere to ABNF
@@ -527,13 +650,19 @@ protected string read_multiline_literal_string() {
   String.Buffer buf = String.Buffer();
   function push = buf->add;
 
-  while (current) {
+  eat_current_newline();
+  push_back();
+
+  while (advance()) {
     if (current == "'" && peek(2) == "''") {
       break;
     }
 
+    if (current[0] == '\0') {
+      error("Illigeal escape char in literal string\n");
+    }
+
     push(current);
-    advance();
   }
 
   expect("'");
@@ -541,33 +670,6 @@ protected string read_multiline_literal_string() {
   expect("'");
 
   return (string)buf;
-}
-
-protected string read_escape_chars() {
-  expect("\\");
-
-  switch (current[0]) {
-    case 0x22: // "    quotation mark     U+0022
-    case 0x5C: // \    reverse solidus    U+005C
-    case 0x2F: // /    solidus            U+002F
-    case 0x62: // b    backspace          U+0008
-    case 0x66: // f    form feed          U+000C
-    case 0x6E: // n    line feed          U+000A
-    case 0x72: // r    carriage return    U+000D
-    case 0x74: // t    tab                U+0009
-      string v = current;
-      advance();
-      return "\\" + v;
-    case 0x75: // uXXXX                U+XXXX
-      error("Unicode not implemented yet\n");
-      break;
-    case 0x55: // UXXXXXXXX            U+XXXXXXXX
-      error("Unicode not implemented yet\n");
-      break;
-
-    default:
-      error("Expected escape sequence character, got %O\n", current);
-  }
 }
 
 protected void lex_comment() {
@@ -645,8 +747,20 @@ protected void eat_whitespace() {
   }
 }
 
-protected void eat_whitespace_and_nl() {
+protected void eat_whitespace_and_newline() {
   while ((< " ", "\t", "\v", "\n" >)[current]) {
+    advance();
+  }
+}
+
+protected void eat_newline() {
+  while (current == "\n") {
+    advance();
+  }
+}
+
+protected void eat_current_newline() {
+  if (current == "\n") {
     advance();
   }
 }
