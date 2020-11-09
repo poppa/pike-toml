@@ -16,5 +16,5 @@ key2 = 456
 [ g .  h  . i ]    # same as [g.h.i]
 [ j . "ʞ" . 'l' ]  # same as [j."ʞ".'l']
 
-# [dog."tater.man"]
-# type.name = "pug"
+[dog."tater.man"]
+type.name = "pug"

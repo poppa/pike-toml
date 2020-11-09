@@ -67,8 +67,10 @@ int main() {
       expect(res->hexkey)->to_equal(255);
       expect(res->strkey)->to_equal("str");
       expect(res->litkey)->to_equal("lit");
-      expect(res->booltrue)->to_equal(true);
-      expect(res->boolfalse)->to_equal(false);
+      expect(res->booltrue)->to_be_truthy();
+      expect(object_program(res->booltrue))->to_equal(Val.true);
+      expect(res->boolfalse)->to_be_falsy()
+      expect(object_program(res->boolfalse))->to_equal(Val.false);
       expect(res["dashed-key"])->to_equal("dashed");
       expect(res->mulstr)->to_equal("Multi\n          line str");
       expect(res->mullit)->to_equal("Multi\n          line lit");

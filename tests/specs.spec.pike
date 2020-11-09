@@ -142,8 +142,10 @@ int main() {
     test("Expect boolean values to be handled correctly", lambda() {
       mapping res = parse_file(toml_file("spec.bool.toml"));
 
-      expect(res->bool1)->to_equal(true);
-      expect(res->bool2)->to_equal(false);
+      expect(res->bool1)->to_be_truthy();
+      expect(res->bool1)->to_be(Val.true);
+      expect(res->bool2)->to_be_falsy();
+      expect(res->bool2)->to_be(Val.false);
     });
   });
 
@@ -225,6 +227,7 @@ int main() {
       expect(res->d->e->f)->to_equal(([]));
       expect(res->g->h->i)->to_equal(([]));
       expect(res->j->ʞ->l)->to_equal(([]));
+      expect(res->dog["tater.man"]->type->name)->to_equal("pug");
     });
   });
 }
