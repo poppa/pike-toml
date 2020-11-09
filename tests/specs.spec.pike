@@ -229,5 +229,25 @@ int main() {
       expect(res->j->ʞ->l)->to_equal(([]));
       expect(res->dog["tater.man"]->type->name)->to_equal("pug");
     });
+
+    test("Expect overwriting existing table keys to fail", lambda () {
+      mixed err = catch (parse_string(#"
+        [a]
+        b = 1
+        [a]
+        c = 2
+      "));
+
+      expect(!err)->to_equal(false);
+
+      err = catch (parse_string(#"
+        [a]
+        b = 1
+        [a.b]
+        c = 2
+      "));
+
+      expect(!err)->to_equal(false);
+    });
   });
 }
