@@ -173,10 +173,21 @@ private RE re_time_frac = RE("^" + re_hms_s + re_frac_s + "$");
 private RE re_time_tz = RE("^" + re_hms_s + re_tz_s + "$");
 private RE re_time = RE("^" + re_hms_s + "$");
 
-class Token {
+public class Position {
+  public int line;
+  public int column;
+
+  protected void create(int line, int column) {
+    this::line = line;
+    this::column = column;
+  }
+}
+
+public class Token {
   public Kind.Type kind;
   public string value;
   public Modifier.Type modifier;
+  public Position position;
 
   protected void create(Kind.Type kind, string value) {
     this::kind = kind;
@@ -190,6 +201,25 @@ class Token {
   ) {
     this::create(kind, value);
     this::modifier = modifier;
+  }
+
+  protected variant void create(
+    Kind.Type kind,
+    string value,
+    Position position
+  ) {
+    this::create(kind, value);
+    this::position = position;
+  }
+
+  protected variant void create(
+    Kind.Type kind,
+    string value,
+    Modifier.Type modifier,
+    Position position
+  ) {
+    this::create(kind, value, modifier);
+    this::position = position;
   }
 
   public bool is_key() {
@@ -378,20 +408,26 @@ class Token {
   }
 
   protected string _sprintf(int t) {
+    string ln = position
+      ? sprintf(" @%d:%d", position->line, position->column)
+      : "";
+
     if (modifier) {
       return sprintf(
-        "%O(kind: %O:%O, value: %O)",
+        "%O(kind: %O:%O, value: %O%s)",
         this_program,
         kind_map[kind],
         modifier_to_string(),
-        value
+        value,
+        ln
       );
     } else {
       return sprintf(
-        "%O(kind: %O, value: %O)",
+        "%O(kind: %O, value: %O%s)",
         this_program,
         kind_map[kind],
-        value
+        value,
+        ln
       );
     }
   }

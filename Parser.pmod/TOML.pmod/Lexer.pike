@@ -3,6 +3,12 @@
 #require constant(Regexp.PCRE.Widestring)
 
 // Defines and macros
+
+#define KIND(K) .Token.Kind. ## K
+#define MOD(M) .Token.Modifier. ## M
+#define TOKEN .Token.Token
+#define POSITION .Token.Position
+
 #define REGEX Regexp.PCRE.Widestring
 #define RegexpOption Regexp.PCRE.OPTION
 
@@ -102,10 +108,6 @@
     }                                             \
   } while (0)
 
-#define KIND(K) .Token.Kind. ## K
-#define MOD(M) .Token.Modifier. ## M
-#define TOKEN .Token.Token
-
 protected enum LexState {
   STATE_NONE,
   STATE_KEY,
@@ -121,7 +123,7 @@ protected enum Ctx {
 protected Stdio.File input;
 protected int(0..) cursor = 0;
 protected int(0..) line = 1;
-protected int(0..) column = 1;
+protected int(0..) column = 0;
 protected string current;
 protected ADT.Queue token_queue = ADT.Queue();
 protected ADT.Queue peek_queue = ADT.Queue();
@@ -212,13 +214,13 @@ public mixed lex() {
     case "}": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return TOKEN(KIND(InlineTableClose), "}");
+      return TOKEN(KIND(InlineTableClose), "}", get_pos());
     } break;
 
     case "]": {
       POP_CTX_STACK();
       SET_STATE_KEY();
-      return TOKEN(KIND(InlineArrayClose), "]");
+      return TOKEN(KIND(InlineArrayClose), "]", get_pos());
     } break;
 
     case ",": {
@@ -264,11 +266,12 @@ protected string advance() {
   current = input->read(1);
 
   if (current != "") {
+    column += 1;
+
     if (current == "\n") {
       inc_line();
     }
 
-    column += 1;
     return current;
   }
 
@@ -276,8 +279,8 @@ protected string advance() {
 }
 
 protected TOKEN lex_key() {
-  TOKEN key = lex_key_low();
-  eat_whitespace();
+  TOKEN key = lex_std_key(true);
+
   // FIXME: Same as in lex_inline_table()
   expect("=", true);
 
@@ -287,6 +290,8 @@ protected TOKEN lex_key() {
 }
 
 protected TOKEN lex_value() {
+  POSITION pos = get_pos();
+
   switch (current[0]) {
     //
     // [    Array start
@@ -307,13 +312,14 @@ protected TOKEN lex_value() {
         string value = read_multiline_quoted_string();
         return value_token(
           value,
-          MOD(String) | MOD(Quoted) | MOD(Multiline)
+          MOD(String) | MOD(Quoted) | MOD(Multiline),
+          pos
         );
       }
 
       string value = read_quoted_string();
 
-      return value_token(value, MOD(String) | MOD(Quoted));
+      return value_token(value, MOD(String) | MOD(Quoted), pos);
     } break;
 
     //
@@ -323,12 +329,13 @@ protected TOKEN lex_value() {
         string value = read_multiline_literal_string();
         return value_token(
           value,
-          MOD(String) | MOD(Literal) | MOD(Multiline)
+          MOD(String) | MOD(Literal) | MOD(Multiline),
+          pos
         );
       }
 
       string value = read_litteral_string();
-      return value_token(value, MOD(String) | MOD(Literal));
+      return value_token(value, MOD(String) | MOD(Literal), pos);
     } break;
 
     //
@@ -348,9 +355,10 @@ protected TOKEN lex_value() {
 }
 
 protected TOKEN lex_inline_table() {
+  POSITION pos = get_pos();
   expect("{", true);
 
-  TOKEN tok_ret = TOKEN(KIND(InlineTableOpen), "{");
+  TOKEN tok_ret = TOKEN(KIND(InlineTableOpen), "{", pos);
   SET_STATE_KEY();
   ctx_stack->push(CTX_TABLE);
 
@@ -362,9 +370,10 @@ protected TOKEN lex_inline_table() {
 }
 
 protected TOKEN lex_array_value() {
+  POSITION pos = get_pos();
   expect("[", true);
 
-  TOKEN ret = TOKEN(KIND(InlineArrayOpen), "[");
+  TOKEN ret = TOKEN(KIND(InlineArrayOpen), "[", pos);
   SET_STATE_VALUE();
   ctx_stack->push(CTX_ARRAY);
 
@@ -372,6 +381,7 @@ protected TOKEN lex_array_value() {
 }
 
 protected TOKEN lex_literal_value() {
+  POSITION pos = get_pos();
   // FIXME: Verfiy there are no more stop characters
   string data = read_until((< ",", "\n", " ", "\t", "\v", "#", "]", "}" >));
 
@@ -380,41 +390,42 @@ protected TOKEN lex_literal_value() {
   }
 
   if (data == "false" || data == "true") {
-    return value_token(data, MOD(Boolean));
+    return value_token(data, MOD(Boolean), pos);
   } else if (re_int->match(data)) {
-    return value_token(data, MOD(Number) | MOD(Int));
+    return value_token(data, MOD(Number)|MOD(Int), pos);
   } else if (re_float->match(data)) {
-    return value_token(data, MOD(Number) | MOD(Float));
+    return value_token(data, MOD(Number)|MOD(Float), pos);
   } else if (re_exp->match(data)) {
-    return value_token(data, MOD(Number) | MOD(Exp));
+    return value_token(data, MOD(Number)|MOD(Exp), pos);
   } else if (re_hex->match(data)) {
-    return value_token(data, MOD(Number) | MOD(Hex));
+    return value_token(data, MOD(Number)|MOD(Hex), pos);
   } else if (re_oct->match(data)) {
-    return value_token(replace(data, "o", ""), MOD(Number) | MOD(Oct));
+    return value_token(replace(data, "o", ""), MOD(Number)|MOD(Oct), pos);
   } else if (re_bin->match(data)) {
-    return value_token(data, MOD(Number) | MOD(Bin));
+    return value_token(data, MOD(Number)|MOD(Bin), pos);
   } else if (re_inf->match(data)) {
-    return value_token(data, MOD(Number) | MOD(Inf));
+    return value_token(data, MOD(Number)|MOD(Inf), pos);
   } else if (re_nan->match(data)) {
-    return value_token(data, MOD(Number) | MOD(Nan));
+    return value_token(data, MOD(Number)|MOD(Nan), pos);
   } else if (re_local_time->match(data)) {
-    return value_token(data, MOD(Date) | MOD(Time));
+    return value_token(data, MOD(Date)|MOD(Time), pos);
   } else if (re_full_date->match(data)) {
-    return value_token(data, MOD(Date));
+    return value_token(data, MOD(Date), pos);
   } else if (re_local_date_time->match(data)) {
-    return value_token(data, MOD(Date) | MOD(Time));
+    return value_token(data, MOD(Date)|MOD(Time), pos);
   } else if (re_offset_date_time->match(data)) {
-    return value_token(data, MOD(Date) | MOD(Time));
+    return value_token(data, MOD(Date)|MOD(Time), pos);
   }
 
   error("Unhandled value: %O\n", data);
 }
 
 protected TOKEN lex_std_array() {
+  POSITION pos = get_pos();
   expect("[");
   expect("[");
 
-  TOKEN tok_open = TOKEN(KIND(TableArrayOpen), "[[");
+  TOKEN tok_open = TOKEN(KIND(TableArrayOpen), "[[", pos);
   lex_std_key();
   expect("]");
   expect("]", true);
@@ -425,20 +436,25 @@ protected TOKEN lex_std_array() {
 }
 
 protected TOKEN lex_std_table() {
+  POSITION pos = get_pos();
   expect("[");
-  TOKEN tok_open = TOKEN(KIND(TableOpen), "[");
+  TOKEN tok_open = TOKEN(KIND(TableOpen), "[", pos);
   lex_std_key();
+  pos = get_pos();
   expect("]", false);
 
-  token_queue->put(TOKEN(KIND(TableClose), "]"));
+  token_queue->put(TOKEN(KIND(TableClose), "]", pos));
 
   return tok_open;
 }
 
-protected void lex_std_key() {
+protected TOKEN lex_std_key(bool no_push) {
   eat_whitespace();
   TOKEN key = lex_key_low();
-  token_queue->put(key);
+
+  if (no_push == false) {
+    token_queue->put(key);
+  }
 
   if (current == ".") {
     key->modifier = MOD(Dotted);
@@ -452,6 +468,11 @@ protected void lex_std_key() {
   }
 
   eat_whitespace();
+  return key;
+}
+
+protected variant TOKEN lex_std_key() {
+  return this::lex_std_key(false);
 }
 
 protected TOKEN lex_key_low() {
@@ -459,6 +480,8 @@ protected TOKEN lex_key_low() {
   string value;
 
   eat_whitespace();
+
+  POSITION pos = get_pos();
 
   switch (current[0]) {
     case '"':
@@ -481,7 +504,7 @@ protected TOKEN lex_key_low() {
 
   eat_whitespace();
 
-  return TOKEN(KIND(Key), value, modifier);
+  return TOKEN(KIND(Key), value, modifier, pos);
 }
 
 protected string read_unquoted_key() {
@@ -682,9 +705,22 @@ protected void lex_comment() {
   }
 }
 
+protected string look() {
+  string r = input->read(1);
+  input->seek(-1, Stdio.SEEK_CUR);
+  return r;
+}
+
 protected void push_back(int n) {
-  input->seek(-n, Stdio.SEEK_CUR);
-  column -= n;
+  int p = input->seek(-n, Stdio.SEEK_CUR);
+
+  // FIXME: This isn't fool-proof in any way
+  if (p >= 0 && look() == "\n") {
+    line -= 1;
+    column = 0;
+  } else {
+    column -= n;
+  }
 }
 
 protected variant void push_back() {
@@ -810,7 +846,22 @@ protected string peek(int(0..) | void n) {
 
 protected TOKEN value_token(
   string value,
-  /*.Token.Modifier.Type*/ int|void modifier
+  /*.Token.Modifier.Type*/ int|void modifier,
+  POSITION|void pos
 ) {
-  return TOKEN(KIND(Value), value, modifier);
+  return TOKEN(KIND(Value), value, modifier, pos);
+}
+
+protected POSITION get_pos() {
+  return POSITION(line, column);
+}
+
+public string input_source() {
+  if (object_program(input) == Stdio.FakeFile) {
+    return "stdin";
+  } else {
+    string o = sprintf("%O", input);
+    sscanf(o, "%*s\"%s\"", string filename);
+    return filename ? filename : "stdin";
+  }
 }
