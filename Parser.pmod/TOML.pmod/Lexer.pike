@@ -58,7 +58,7 @@
 
 #define POSITION_ERROR(A...)          \
   error(                              \
-    "%s in %q@line:%d,column:%d\n",   \
+    "%s in \"%s:%d:%d\"\n",           \
     sprintf(A),                       \
     input_source(),                   \
     line,                             \
