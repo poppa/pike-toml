@@ -7,17 +7,17 @@
 
 #define ERROR_SOURCE(TOK)     \
   sprintf(                    \
-    "%q@line:%d,column:%d",   \
+    "\"%s:%d:%d\"",           \
     lexer->input_source(),    \
     (TOK)->position->line,    \
     (TOK)->position->column   \
   )
 
-#define REDEFINE_ERROR(TOK)                   \
-  error(                                      \
-    "Trying to redefine key %O in %s\n",      \
-    (TOK)->value,                             \
-    ERROR_SOURCE(TOK)                         \
+#define REDEFINE_ERROR(TOK)                         \
+  error(                                            \
+    "Trying to redefine key %O in %s\n",            \
+    path_from_token((TOK)),                         \
+    ERROR_SOURCE(pop_token((TOK)))                  \
   )
 
 protected typedef RefArray|mapping(string:mixed) Container;
@@ -126,7 +126,7 @@ protected void normalize_result(mapping|void res) {
 protected void parse_table_array_open(TOKEN token, .Lexer lexer) {
   expect_kind(lexer, token, KIND(TableArrayOpen));
   TokenArray keys = read_keys(lexer);
-  RefArray a = mkarray(top, keys);
+  RefArray a = mkarray(lexer, top, keys);
   expect_kind(lexer, lexer->lex(), KIND(TableArrayClose));
 
   mapping c = ([]);
@@ -134,6 +134,12 @@ protected void parse_table_array_open(TOKEN token, .Lexer lexer) {
   current_container = c;
 
   TOKEN next = lexer->lex();
+
+  if (!next) {
+    current_container = old_container;
+    a += ({([])});
+    return;
+  }
 
   // Empty table array, something like
   // [[arr]]
@@ -167,8 +173,8 @@ protected void parse_table_open(TOKEN token, .Lexer lexer) {
   mapping m = this::mkmapping(lexer, top, keys);
 
   if (!mappingp(m)) {
-    TOKEN f = has_index(keys, sizeof(keys) - 2) ? keys[-2] : keys[-1];
-    REDEFINE_ERROR(f);
+    // TOKEN f = has_index(keys, sizeof(keys) - 2) ? keys[-2] : keys[-1];
+    REDEFINE_ERROR(keys);
   }
 
   current_container = m;
@@ -276,7 +282,7 @@ protected RefArray parse_inline_array(TOKEN token, .Lexer lexer) {
   expect_kind(lexer, token, KIND(InlineArrayOpen));
 
   Container prev_container = current_container;
-  RefArray values = RefArray();
+  RefArray values = RefArray(true);
   current_container = values;
   .Token.Modifier.Type first_type;
   TOKEN next;
@@ -368,7 +374,7 @@ protected mapping mkmapping(
   path = path * ".";
 
   if (!allow_redefine && defined_paths[path]) {
-    REDEFINE_ERROR(keys[-1]);
+    REDEFINE_ERROR(keys);
   }
 
   defined_paths[path] = true;
@@ -376,12 +382,13 @@ protected mapping mkmapping(
   return p;
 }
 
-protected RefArray mkarray(mapping old, TokenArray keys) {
+protected RefArray mkarray(.Lexer lexer, mapping old, TokenArray keys) {
   Container p = old;
   Container tmp = p;
   array(string)|string path = ({});
 
   int len = sizeof(keys);
+  TOKEN prev;
 
   for (int i; i < len; i++) {
     if (is_ref_array(p)) {
@@ -394,13 +401,30 @@ protected RefArray mkarray(mapping old, TokenArray keys) {
 
     if (!tmp) {
       tmp = p[k->value] = (i == len - 1) ? RefArray() : ([]);
+    } else if (i == len - 1) {
+      if (is_ref_array(tmp) && tmp->is_static) {
+        error(
+          "Trying to overwrite already defined inline array %q at %s\n",
+          k->value,
+          ERROR_SOURCE(prev || k)
+        );
+      }
     }
 
+    if (!mappingp(tmp) && !is_ref_array(tmp)) {
+      REDEFINE_ERROR(prev || k);
+    }
+
+    prev = k;
     p = tmp;
   }
 
   if (!is_ref_array(p)) {
-    error("mkarray expexted an array but got %O\n", p);
+    error(
+      "mkarray expexted an array but got %O at %s\n",
+      p,
+      ERROR_SOURCE(keys[-1])
+    );
   }
 
   path = path * ".";
@@ -457,8 +481,25 @@ protected bool is_ref_array(mixed o) {
   return objectp(o) && object_program(o) == RefArray;
 }
 
+protected string path_from_token(TOKEN|TokenArray t) {
+  if (arrayp(t)) {
+    return map(t, lambda (TOKEN t) { return t->value; }) * ".";
+  } else {
+    return t->value;
+  }
+}
+
+protected TOKEN pop_token(TOKEN|TokenArray t) {
+  return arrayp(t) ? t[-1] : t;
+}
+
 protected class RefArray {
+  public bool is_static = false;
   protected array data = ({});
+
+  protected void create(bool|void is_static) {
+    this::is_static = is_static;
+  }
 
   public mixed `+(array value) {
     data += value;
