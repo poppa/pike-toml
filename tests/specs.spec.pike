@@ -250,4 +250,56 @@ int main() {
       expect(!err)->to_equal(false);
     });
   });
+
+  describe("Test inline tables from https://toml.io/", lambda () {
+    test("Expect inline tables to be handled correctly", lambda() {
+      mapping res = parse_file(toml_file("spec.inline-table.toml"));
+
+      expect(res->animal->type->name)->to_equal("pug");
+      expect(res->name)->to_equal(([
+        "first": "Tom",
+        "last": "Preston-Werner",
+      ]));
+      expect(res->point)->to_equal(([ "x": 1, "y": 2 ]));
+    });
+  });
+
+  describe("Test array tables from https://toml.io/", lambda () {
+    test("Expect array tables to be handled correctly", lambda() {
+      mapping res = parse_file(toml_file("spec.array-table.toml"));
+
+      expect(res->products)->to_equal(({
+        ([
+          "name": "Hammer",
+          "sku": 738594937
+        ]),
+        ([ ]),
+        ([
+          "color": "gray",
+          "name": "Nail",
+          "sku": 284758393
+        ])
+      }));
+
+      expect(res->fruit)->to_equal(({
+        ([
+          "name": "apple",
+          "physical": ([
+            "color": "red",
+            "shape": "round"
+          ]),
+          "variety": ({
+            ([ "name": "red delicious" ]),
+            ([ "name": "granny smith" ])
+          })
+        ]),
+        ([
+          "name": "banana",
+          "variety": ({
+            ([ "name": "plantain" ])
+          })
+        ])
+      }));
+    });
+  });
 }

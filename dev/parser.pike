@@ -6,7 +6,7 @@ import Parser.TOML;
 
 int main() {
   START_TIMER();
-  mapping res = parse_file(combine_path(__DIR__, "simple1.toml"));
+  mapping res = parse_file(combine_path(__DIR__, "simple2.toml"));
   float t = GET_TIME();
   werror("Res: %O\n", res);
   werror("\nTook: %O\n", t);
