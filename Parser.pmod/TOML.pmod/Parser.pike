@@ -153,10 +153,11 @@ protected void parse_table_open(TOKEN token, .Lexer lexer) {
   expect_kind(lexer, token, KIND(TableOpen));
 
   TokenArray keys = read_keys(lexer);
-  mapping m;
+  mapping m = this::mkmapping(lexer, top, keys);
 
-  if (catch(m = this::mkmapping(top, keys))) {
-    REDEFINE_ERROR(keys[-1]);
+  if (!mappingp(m)) {
+    TOKEN f = has_index(keys, sizeof(keys) - 2) ? keys[-2] : keys[-1];
+    REDEFINE_ERROR(f);
   }
 
   current_container = m;
@@ -179,7 +180,7 @@ protected void parse_key(TOKEN token, .Lexer lexer) {
     TokenArray keys = ({ token }) + read_keys(lexer);
     // FIXME: Allowing redefines 'effs up the overwrite check.
     // Skip the last token, it will be the key in the returned mapping
-    mapping m = this::mkmapping(current_container, keys[..<1], true);
+    mapping m = this::mkmapping(lexer, current_container, keys[..<1], true);
 
     if (!mappingp(m)) {
       error(
@@ -316,6 +317,7 @@ protected RefArray parse_inline_array(TOKEN token, .Lexer lexer) {
 }
 
 protected mapping mkmapping(
+  .Lexer lexer,
   mapping old,
   TokenArray keys,
   bool|void allow_redefine
@@ -323,22 +325,28 @@ protected mapping mkmapping(
   mapping p = old;
   mapping tmp = ([]);
   array(string)|string path = ({});
+  TOKEN prev;
 
   foreach (keys, TOKEN t) {
     tmp = p[t->value];
     path += ({ t->pike_value() });
 
-    if (!tmp) {
+    if (undefinedp(tmp)) {
       tmp = p[t->pike_value()] = ([]);
     }
 
+    if (!mappingp(tmp)) {
+      REDEFINE_ERROR(prev || t);
+    }
+
+    prev = t;
     p = tmp;
   }
 
   path = path * ".";
 
   if (!allow_redefine && defined_paths[path]) {
-    error("Trying to redefine %q\n", path);
+    REDEFINE_ERROR(keys[-1]);
   }
 
   defined_paths[path] = true;
