@@ -179,7 +179,15 @@ protected void parse_key(TOKEN token, .Lexer lexer) {
     TokenArray keys = ({ token }) + read_keys(lexer);
     // FIXME: Allowing redefines 'effs up the overwrite check.
     // Skip the last token, it will be the key in the returned mapping
-    mapping m = mkmapping(current_container, keys[..<1], true);
+    mapping m = this::mkmapping(current_container, keys[..<1], true);
+
+    if (!mappingp(m)) {
+      error(
+        "Bad assignment of key %O at %s\n",
+        keys[-1]->value,
+        ERROR_SOURCE(keys[-1])
+      );
+    }
 
     current_container = m;
     // The last key is the key of he new mapping
@@ -287,7 +295,7 @@ protected RefArray parse_inline_array(TOKEN token, .Lexer lexer) {
         ? MOD(String)
         : next->modifier;
     } else {
-      if (!.Token.has_modifier(next, first_type)) {
+      if (!next->is_modifier(first_type)) {
         error(
           "Array values must be of the same type. "
           "Array is typed as %O, got value of type %O in %s\n",
