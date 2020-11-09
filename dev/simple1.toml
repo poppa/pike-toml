@@ -73,8 +73,9 @@
 # [table.deep]
 # key = 1
 
-# [table.root]
-# key = { val = 'a', bajs = 'yes' }
+[table.root]
+key = { val = 'a', bajs = 'yes' }
+# key = 'Hej'
 
 # [table]
 # key = 3
@@ -92,18 +93,18 @@
 
 # str = "Name\tJos\u00E9\nLoc\t\"SF\"\f."
 
-# str = """\
-# The quick brown \
+str = """\
+The quick brown \
 
 
-#   fox jumps over \
-#     the lazy dog."""
+  fox jumps over \
+    the lazy dog."""
 
-# str4 = """\
-#        The quick brown \
-#        fox jumps over \
-#        the lazy \t dog.\
-#        """
+str4 = """\
+       The quick brown \
+       fox jumps over \
+       the lazy \t dog.\
+       """
 
 regex2 = '''I [dw]on't need \d{2} apples'''
 lines  = '''
@@ -112,3 +113,8 @@ trimmed in raw strings.
    All other whitespace
    is preserved.
 '''
+
+name = "Orange"
+physical.color = "orange"
+physical.shape = "round"
+site."google.com" = true

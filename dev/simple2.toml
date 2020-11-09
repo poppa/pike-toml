@@ -1,0 +1,4 @@
+[table.root]
+# table.b = 1
+key = { val = 'a', bajs = """yes""" }
+arr.sub = [1, 2]
