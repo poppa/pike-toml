@@ -56,12 +56,21 @@
 #define QUOTE_CHAR "\""
 #define ESC_CHAR "\\"
 
+#define POSITION_ERROR(A...)          \
+  error(                              \
+    "%s in %q@line:%d,column:%d\n",   \
+    sprintf(A),                       \
+    input_source(),                   \
+    line,                             \
+    column                            \
+  )
+
 #define DECODE_ESC_IN_STRING()                                                 \
   if (current == ESC_CHAR) {                                                   \
     string next = peek();                                                      \
                                                                                \
     if (!is_escape_char(next)) {                                               \
-      error("Illegal escape sequence: %O\n", next);                            \
+      POSITION_ERROR("Illegal escape sequence %O", next);                      \
     }                                                                          \
                                                                                \
     if (is_unicode_escape(next)) {                                             \
@@ -72,7 +81,7 @@
       sscanf(s, "%x", int ch);                                                 \
                                                                                \
       if (!Unicode.is_wordchar(ch)) {                                          \
-        error("Invalid unicode character \"%c\"\n", ch);                       \
+        POSITION_ERROR("Invalid unicode character \"%c\"", ch);                \
       }                                                                        \
                                                                                \
       buf->putchar(ch);                                                        \
@@ -259,7 +268,7 @@ public mixed lex() {
     }
   }
 
-  error("Unexpected character %O\n", current);
+  POSITION_ERROR("Unexpected character %O", current);
 }
 
 protected string advance() {
@@ -351,7 +360,7 @@ protected TOKEN lex_value() {
     } break;
   }
 
-  exit(1, "Lex value\n");
+  POSITION_ERROR("Unhandled value character %O", current);
 }
 
 protected TOKEN lex_inline_table() {
@@ -417,7 +426,7 @@ protected TOKEN lex_literal_value() {
     return value_token(data, MOD(Date)|MOD(Time), pos);
   }
 
-  error("Unhandled value: %O\n", data);
+  POSITION_ERROR("Unhandled value %O", data);
 }
 
 protected TOKEN lex_std_array() {
@@ -499,7 +508,7 @@ protected TOKEN lex_key_low() {
       break;
 
     default:
-      error("Unexpected character %O\n", current);
+      POSITION_ERROR("Unexpected character %O", current);
   }
 
   eat_whitespace();
@@ -541,7 +550,7 @@ protected string read_litteral_string() {
         break;
 
       default:
-        error("Unexpected character %O in literal string\n", current);
+        POSITION_ERROR("Unexpected character %O in literal string", current);
     }
   }
 
@@ -558,7 +567,7 @@ protected string read_quoted_string() {
 
   while (advance()) {
     if (!current) {
-      error("Unterminated string literal\n");
+      POSITION_ERROR("Unterminated string literal");
     }
 
     if (current == QUOTE_CHAR) {
@@ -576,7 +585,7 @@ protected string read_quoted_string() {
         push(current);
         break;
       default:
-        error("Unhandled character %O\n", current);
+        POSITION_ERROR("Unhandled character %O", current);
     }
   }
 
@@ -607,7 +616,7 @@ protected int|string escape_char_to_literal(int c) {
     case 'n':  return '\n';
     case 'r':  return '\r';
     case 't':  return '\t';
-    default: error("Unhandled escape character: %c\n", c);
+    default: POSITION_ERROR("Unhandled escape character \"%c\"", c);
   }
 }
 
@@ -682,7 +691,7 @@ protected string read_multiline_literal_string() {
     }
 
     if (current[0] == '\0') {
-      error("Illigeal escape char in literal string\n");
+      POSITION_ERROR("Illegal escape char %q in literal string", current);
     }
 
     push(current);
@@ -729,7 +738,7 @@ protected variant void push_back() {
 
 protected void expect(string expected, bool no_advance) {
   if (current != expected) {
-    error("Expected %O got %O\n", expected, current);
+    POSITION_ERROR("Expected %O got %O", expected, current);
   }
 
   if (!no_advance) {
@@ -739,7 +748,7 @@ protected void expect(string expected, bool no_advance) {
 
 protected variant void expect(multiset expected, bool no_advance) {
   if (!expected[current]) {
-    error("Expected %O got %O\n", expected, current);
+    POSITION_ERROR("Expected %O got %O", expected, current);
   }
 
   if (!no_advance) {
@@ -809,7 +818,7 @@ protected string read_n_chars(int(0..) len) {
     buf += advance();
 
     if (!current) {
-      error("Unexpected end of file\n");
+      POSITION_ERROR("Unexpected end of file");
     }
   }
 
