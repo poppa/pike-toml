@@ -304,7 +304,7 @@ public class Token {
     } else if (is_modifier(Modifier.Date)) {
       return render_date();
     } else if (is_modifier(Modifier.Boolean)) {
-      return value == "true";
+      return value == "true" ? Val.true : Val.false;
     } else {
       return string_to_utf8(value);
     }
