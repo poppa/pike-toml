@@ -89,7 +89,7 @@ public mapping parse(.Lexer lexer) {
   return top;
 }
 
-protected void normalize_result() {
+protected void normalize_result(mapping|void res) {
   function arrayit, mapit;
 
   arrayit = lambda(array|RefArray a) {
@@ -120,7 +120,7 @@ protected void normalize_result() {
     return m;
   };
 
-  mapit(top);
+  mapit(res || top);
 }
 
 protected void parse_table_array_open(TOKEN token, .Lexer lexer) {
@@ -134,6 +134,17 @@ protected void parse_table_array_open(TOKEN token, .Lexer lexer) {
   current_container = c;
 
   TOKEN next = lexer->lex();
+
+  // Empty table array, something like
+  // [[arr]]
+  // [[arr]]
+  // key = 1
+  if (next->is_table_array_open()) {
+    current_container = old_container;
+    a += ({([])});
+    this_function(next, lexer);
+    return;
+  }
 
   do {
     expect_one_of(lexer, next, (< KIND(Key) >));
@@ -328,14 +339,25 @@ protected mapping mkmapping(
   TOKEN prev;
 
   foreach (keys, TOKEN t) {
-    tmp = p[t->value];
+    if (is_ref_array(p)) {
+      mixed _tmp = p[-1];
+
+      if (!mappingp(_tmp)) {
+        error("Unhandled array type\n");
+      }
+
+      tmp = _tmp[t->pike_value()] = ([]);
+    } else {
+      tmp = p[t->value];
+    }
+
     path += ({ t->pike_value() });
 
     if (undefinedp(tmp)) {
       tmp = p[t->pike_value()] = ([]);
     }
 
-    if (!mappingp(tmp)) {
+    if (!mappingp(tmp) && !is_ref_array(tmp)) {
       REDEFINE_ERROR(prev || t);
     }
 
@@ -363,7 +385,7 @@ protected RefArray mkarray(mapping old, TokenArray keys) {
 
   for (int i; i < len; i++) {
     if (is_ref_array(p)) {
-      error("Badly nested table array\n");
+      p = p[-1];
     }
 
     TOKEN k = keys[i];
@@ -444,6 +466,10 @@ protected class RefArray {
   }
 
   public mixed `[](int idx) {
+    if (idx < 0) {
+      idx = sizeof(data) + idx;
+    }
+
     if (has_index(data, idx)) {
       return data[idx];
     }
