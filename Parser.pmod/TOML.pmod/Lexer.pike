@@ -807,6 +807,7 @@ protected void eat_current_newline() {
 }
 
 protected string read_n_chars(int(0..) len) {
+  POSITION p = get_pos();
   string buf = current;
   int i = 0;
 
@@ -814,7 +815,11 @@ protected string read_n_chars(int(0..) len) {
     buf += advance();
 
     if (!current) {
-      POSITION_ERROR("Unexpected end of file");
+      POSITION_ERROR(
+        "Unexpected end of file. Started at %d:%d",
+        p->line,
+        p->column
+      );
     }
   }
 
@@ -873,11 +878,13 @@ protected inline bool decode_escacpe_sequence(String.Buffer buf) {
       advance(2);
 
       string s = "0x" + (next == "u" ? read_n_chars(3) : read_n_chars(7));
-
       sscanf(s, "%x", int ch);
 
       if (!Unicode.is_wordchar(ch)) {
-        POSITION_ERROR("Invalid unicode character \"%c\"", ch);
+        POSITION_ERROR(
+          "Invalid unicode character \"%s\"",
+          replace(s, "0x", "\\u")
+        );
       }
 
       buf->putchar(ch);
