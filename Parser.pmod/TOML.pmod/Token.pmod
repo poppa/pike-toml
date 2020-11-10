@@ -1,5 +1,6 @@
 #charset utf-8
 #pike __REAL_VERSION__
+#require constant(Regexp.PCRE.Widestring)
 
 class Kind {
   public enum Type {

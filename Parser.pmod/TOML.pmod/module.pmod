@@ -1,3 +1,6 @@
+#charset utf-8
+#pike __REAL_VERSION__
+
 //! Parse a TOML file.
 //!
 //! @param file
