@@ -251,6 +251,22 @@ protected string advance() {
   return current = UNDEFINED;
 }
 
+protected variant string advance(int n) {
+  string buf = UNDEFINED;
+
+  for (int i = 0; i < n; i++) {
+    string r = advance();
+
+    if (!r) {
+      return UNDEFINED;
+    }
+
+    buf += r;
+  }
+
+  return buf;
+}
+
 protected TOKEN lex_key() {
   TOKEN key = lex_std_key(true);
 
@@ -854,8 +870,7 @@ protected inline bool decode_escacpe_sequence(String.Buffer buf) {
     }
 
     if (is_unicode_escape(next)) {
-      advance();
-      advance();
+      advance(2);
 
       string s = "0x" + (next == "u" ? read_n_chars(3) : read_n_chars(7));
 
