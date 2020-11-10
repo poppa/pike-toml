@@ -156,6 +156,18 @@ public TOKEN peek_token() {
   return t;
 }
 
+//! Returns the input source. If the input source was a file on disk the
+//! the path is returns, else @code{stdin@} is returned.
+public string input_source() {
+  if (object_program(input) == Stdio.FakeFile) {
+    return "stdin";
+  } else {
+    string o = sprintf("%O", input);
+    sscanf(o, "%*s\"%s\"", string filename);
+    return filename ? filename : "stdin";
+  }
+}
+
 public mixed lex() {
   if (sizeof(peek_queue)) {
     return peek_queue->get();
@@ -847,18 +859,6 @@ protected TOKEN value_token(
 
 protected POSITION get_pos() {
   return POSITION(line, column);
-}
-
-//! Returns the input source. If the input source was a file on disk the
-//! the path is returns, else @code{stdin@} is returned.
-public string input_source() {
-  if (object_program(input) == Stdio.FakeFile) {
-    return "stdin";
-  } else {
-    string o = sprintf("%O", input);
-    sscanf(o, "%*s\"%s\"", string filename);
-    return filename ? filename : "stdin";
-  }
 }
 
 protected inline bool decode_escacpe_sequence(String.Buffer buf) {
