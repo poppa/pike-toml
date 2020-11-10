@@ -65,42 +65,6 @@
     column                            \
   )
 
-#define DECODE_ESC_IN_STRING()                                                 \
-  if (current == ESC_CHAR) {                                                   \
-    string next = peek();                                                      \
-                                                                               \
-    if (!is_escape_char(next)) {                                               \
-      POSITION_ERROR("Illegal escape sequence %O", next);                      \
-    }                                                                          \
-                                                                               \
-    if (is_unicode_escape(next)) {                                             \
-      advance();                                                               \
-      advance();                                                               \
-                                                                               \
-      string s = "0x" + (next == "u" ? read_n_chars(3) : read_n_chars(7));     \
-      sscanf(s, "%x", int ch);                                                 \
-                                                                               \
-      if (!Unicode.is_wordchar(ch)) {                                          \
-        POSITION_ERROR("Invalid unicode character \"%c\"", ch);                \
-      }                                                                        \
-                                                                               \
-      buf->putchar(ch);                                                        \
-                                                                               \
-      continue;                                                                \
-    }                                                                          \
-                                                                               \
-    int|string c = escape_char_to_literal(next[0]);                            \
-                                                                               \
-    if (intp(c)) {                                                             \
-      buf->putchar(c);                                                         \
-    } else {                                                                   \
-      push(c);                                                                 \
-    }                                                                          \
-                                                                               \
-    advance();                                                                 \
-    continue;                                                                  \
-  }
-
 #define POP_CTX_STACK()         \
   do {                          \
     if (sizeof(ctx_stack)) {    \
@@ -574,7 +538,9 @@ protected string read_quoted_string() {
       break;
     }
 
-    DECODE_ESC_IN_STRING();
+    if (decode_escacpe_sequence(buf)) {
+      continue;
+    }
 
     switch (current[0]) {
       case 0x09..0x0D:
@@ -653,7 +619,9 @@ protected string read_multiline_quoted_string() {
       break;
     }
 
-    DECODE_ESC_IN_STRING();
+    if (decode_escacpe_sequence(buf)) {
+      continue;
+    }
 
     push(current);
   }
@@ -865,6 +833,8 @@ protected POSITION get_pos() {
   return POSITION(line, column);
 }
 
+//! Returns the input source. If the input source was a file on disk the
+//! the path is returns, else @code{stdin@} is returned.
 public string input_source() {
   if (object_program(input) == Stdio.FakeFile) {
     return "stdin";
@@ -873,4 +843,45 @@ public string input_source() {
     sscanf(o, "%*s\"%s\"", string filename);
     return filename ? filename : "stdin";
   }
+}
+
+protected inline bool decode_escacpe_sequence(String.Buffer buf) {
+  if (current == ESC_CHAR) {
+    string next = peek();
+
+    if (!is_escape_char(next)) {
+      POSITION_ERROR("Illegal escape sequence %O", next);
+    }
+
+    if (is_unicode_escape(next)) {
+      advance();
+      advance();
+
+      string s = "0x" + (next == "u" ? read_n_chars(3) : read_n_chars(7));
+
+      sscanf(s, "%x", int ch);
+
+      if (!Unicode.is_wordchar(ch)) {
+        POSITION_ERROR("Invalid unicode character \"%c\"", ch);
+      }
+
+      buf->putchar(ch);
+
+      return true;
+    }
+
+    int|string c = escape_char_to_literal(next[0]);
+
+    if (intp(c)) {
+      buf->putchar(c);
+    } else {
+      buf->add(c);
+    }
+
+    advance();
+
+    return true;
+  }
+
+  return false;
 }
